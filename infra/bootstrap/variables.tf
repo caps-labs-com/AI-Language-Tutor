@@ -12,7 +12,7 @@ variable "google_region" {
 variable "github_repository" {
   description = "GitHub repository allowed to exchange OIDC tokens."
   type        = string
-  default     = "Kapizany/AI-Language-Tutor"
+  default     = "caps-labs-com/AI-Language-Tutor"
 }
 
 variable "github_branch" {
