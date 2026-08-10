@@ -150,7 +150,7 @@ export function normalizeGrammarMistakes(value: unknown): GrammarMistake[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (typeof item === "string" && item.trim()) {
-      return [{ incorrect: "Evite", correct: "Forma recomendada", explanation: item.trim() }];
+      return [{ incorrect: "", correct: "", explanation: item.trim() }];
     }
     if (!isRecord(item)) return [];
     const explanation = textValue(item.explanation_pt_br ?? item.explanation);

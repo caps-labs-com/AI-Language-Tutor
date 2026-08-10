@@ -48,6 +48,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { AdminPanel } from "@/components/admin/admin-panel";
 import { AppHeader } from "@/components/app-header";
+import { GrammarFormation } from "@/components/grammar-formation";
 import { AppNav } from "@/components/app-nav";
 import {
   Conversation,
@@ -1998,7 +1999,7 @@ function LearningCenter({
                 <strong>Tema {activityIndex + 1} de {activityCount}</strong>
               </header>
               <section className="grammar-overview"><h3>Entenda o tema</h3>{grammarTopic.overview.split(/\n+/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</section>
-              <section className="grammar-formation"><h3>Como formar</h3>{grammarTopic.formation.split(/\n+/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</section>
+              <section className="grammar-formation"><h3>Como formar</h3><GrammarFormation value={grammarTopic.formation}/></section>
               <section className="grammar-use-cases"><h3>Casos de uso</h3>
                 <div>{grammarTopic.useCases.map((useCase, index) => (
                   <article key={`${useCase.title}-${index}`}>
@@ -2010,7 +2011,15 @@ function LearningCenter({
                 ))}</div>
               </section>
               <section className="grammar-mistakes"><h3>Erros comuns</h3>
-                <div>{grammarTopic.commonMistakes.map((mistake, index) => <article key={index}><del>{mistake.incorrect}</del><ArrowRight/><ins>{mistake.correct}</ins><p>{mistake.explanation}</p></article>)}</div>
+                <div>{grammarTopic.commonMistakes.map((mistake, index) => {
+                  const hasComparison = Boolean(mistake.incorrect && mistake.correct);
+                  return (
+                    <article key={index} className={hasComparison ? "" : "text-only"}>
+                      {hasComparison && <><del>{mistake.incorrect}</del><ArrowRight/><ins>{mistake.correct}</ins></>}
+                      <p>{mistake.explanation}</p>
+                    </article>
+                  );
+                })}</div>
               </section>
               <section className="grammar-notes"><h3>Para lembrar</h3><ul>{grammarTopic.notes.map((note) => <li key={note}>{note}</li>)}</ul></section>
               <div className="learning-navigation">

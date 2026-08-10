@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { calculateDashboardMetrics } from "../src/lib/progress.ts";
+import { parseGrammarFormation } from "../src/lib/grammar-format.ts";
 import {
   normalizeGrammarMistakes,
   normalizeGrammarNotes,
@@ -53,12 +54,33 @@ test("catálogo gramatical aceita conteúdo gerado em formato textual", () => {
     examples: [],
   }]);
   assert.deepEqual(normalizeGrammarMistakes(["Não traduza literalmente do português."]), [{
-    incorrect: "Evite",
-    correct: "Forma recomendada",
+    incorrect: "",
+    correct: "",
     explanation: "Não traduza literalmente do português.",
   }]);
   assert.deepEqual(normalizeGrammarNotes("Leia os exemplos em voz alta."), [
     "Leia os exemplos em voz alta.",
+  ]);
+});
+
+test("formação gramatical transforma conjugações em tabelas", () => {
+  const blocks = parseGrammarFormation(
+    "Apresento as formas no presente:\n\n**ESSERE** (ser/estar)\n\n- io sono\n\n- tu sei\n\n**AVERE** (ter)\n\n- io ho\n\n- tu hai",
+  );
+  assert.deepEqual(blocks, [
+    { type: "paragraph", text: "Apresento as formas no presente:" },
+    {
+      type: "conjugation",
+      verb: "ESSERE",
+      translation: "ser/estar",
+      rows: [{ subject: "io", form: "sono" }, { subject: "tu", form: "sei" }],
+    },
+    {
+      type: "conjugation",
+      verb: "AVERE",
+      translation: "ter",
+      rows: [{ subject: "io", form: "ho" }, { subject: "tu", form: "hai" }],
+    },
   ]);
 });
 
