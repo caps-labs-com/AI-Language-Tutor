@@ -47,10 +47,15 @@ fi
 run_sql_file() {
   local label="$1"
   local file="$2"
+  local transaction_mode="${3:-single}"
+  local -a transaction_args=()
+  if [ "$transaction_mode" = "single" ]; then
+    transaction_args+=(--single-transaction)
+  fi
   printf '  %-58s' "$label"
   if ! output="$(docker exec --interactive "$container" \
     psql --username postgres --dbname postgres \
-      --no-psqlrc --quiet --single-transaction \
+      --no-psqlrc --quiet "${transaction_args[@]}" \
       --variable ON_ERROR_STOP=1 \
       --file - <"$file" 2>&1)"; then
     echo "FALHOU"
@@ -74,7 +79,7 @@ echo "Executando testes..."
 test_count=0
 for test_file in "$project_root"/supabase/tests/*.sql; do
   [ "$(basename "$test_file")" = "harness.sql" ] && continue
-  run_sql_file "$(basename "$test_file")" "$test_file"
+  run_sql_file "$(basename "$test_file")" "$test_file" file-managed
   test_count=$((test_count + 1))
 done
 

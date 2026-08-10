@@ -1,0 +1,479 @@
+{
+  "schema_version": "1.0.0",
+  "curriculum_version": "2026-08-10",
+  "audience": "adult Brazilian Portuguese speakers",
+  "languages": ["en", "es", "fr", "it"],
+  "levels": ["A1", "A2", "B1", "B2"],
+  "authority": {
+    "common_framework": "CEFR Companion Volume 2020",
+    "language_specific": {
+      "en": ["Cambridge English", "English Profile"],
+      "es": ["Plan Curricular del Instituto Cervantes"],
+      "fr": ["France Education international CEFR linguistic inventory"],
+      "it": ["Profilo della lingua italiana A1-B2", "CILS guidelines"]
+    },
+    "note": "CEFR descriptors are authoritative capability references; topic order and editorial limits are Lume curriculum decisions."
+  },
+  "common": {
+    "themes": [
+      "identity_relationships_daily_life",
+      "home_neighborhood_city_mobility",
+      "food_shopping_services",
+      "health_wellbeing_emergencies",
+      "education_work_career",
+      "travel_accommodation_interculturality",
+      "leisure_culture_media_technology",
+      "nature_weather_sustainability",
+      "society_citizenship_human_relations",
+      "opinions_decisions_projects_problem_solving"
+    ],
+    "levels": {
+      "A1": {
+        "global_outcome": "Meet immediate concrete needs with basic expressions and cooperative support.",
+        "functions": [
+          "greet_and_close",
+          "introduce_self_and_others",
+          "exchange_personal_information",
+          "state_likes_abilities_possession_and_location",
+          "ask_price_time_quantity_and_direction",
+          "make_basic_requests",
+          "understand_short_instructions",
+          "describe_people_objects_places_and_routines"
+        ],
+        "skills": {
+          "reading": "Understand short predictable notices, menus, forms, messages and descriptions.",
+          "listening": "Understand slow clear speech about personal details and immediate needs.",
+          "spoken_production": "Produce isolated or linked simple phrases about self and concrete needs.",
+          "written_production": "Complete forms and write very short messages and descriptions.",
+          "interaction": "Ask and answer simple questions when the interlocutor helps.",
+          "mediation": "Relay names, numbers, times and very simple practical information."
+        },
+        "content_limits": {
+          "reading_words_min": 100,
+          "reading_words_max": 180,
+          "paragraphs_min": 2,
+          "paragraphs_max": 3,
+          "questions_min": 3,
+          "questions_max": 4,
+          "writing_words_min": 30,
+          "writing_words_max": 60,
+          "audio_seconds_min": 30,
+          "audio_seconds_max": 60,
+          "new_lexical_items_min": 8,
+          "new_lexical_items_max": 12
+        },
+        "assessment_tasks": [
+          "complete_personal_form",
+          "understand_notice_or_menu",
+          "exchange_personal_details",
+          "write_short_practical_message",
+          "follow_short_directions"
+        ]
+      },
+      "A2": {
+        "global_outcome": "Handle routine exchanges and describe background, environment and immediate needs.",
+        "functions": [
+          "report_simple_events",
+          "arrange_meetings",
+          "invite_accept_and_refuse",
+          "compare_options",
+          "express_reason_frequency_and_quantity",
+          "request_clarification_and_confirmation",
+          "give_sequenced_instructions",
+          "book_buy_complain_and_request"
+        ],
+        "skills": {
+          "reading": "Understand short emails, advertisements, instructions and predictable narratives.",
+          "listening": "Understand short messages and routine conversations on familiar matters.",
+          "spoken_production": "Give a simple series of phrases about routines, past events and plans.",
+          "written_production": "Write linked notes, emails and descriptions on familiar topics.",
+          "interaction": "Complete routine tasks involving direct exchange of information.",
+          "mediation": "Select and relay relevant points from short concrete texts."
+        },
+        "content_limits": {
+          "reading_words_min": 180,
+          "reading_words_max": 320,
+          "paragraphs_min": 3,
+          "paragraphs_max": 4,
+          "questions_min": 4,
+          "questions_max": 5,
+          "writing_words_min": 70,
+          "writing_words_max": 120,
+          "audio_seconds_min": 60,
+          "audio_seconds_max": 120,
+          "new_lexical_items_min": 10,
+          "new_lexical_items_max": 16
+        },
+        "assessment_tasks": [
+          "understand_routine_email",
+          "describe_recent_event",
+          "make_and_change_booking",
+          "write_invitation_or_request",
+          "give_simple_advice"
+        ]
+      },
+      "B1": {
+        "global_outcome": "Handle most familiar situations and produce connected language with reasons and explanations.",
+        "functions": [
+          "narrate_with_sequence_context_and_result",
+          "explain_plans_intentions_causes_and_consequences",
+          "state_and_support_opinion",
+          "summarize_straightforward_content",
+          "report_another_persons_speech",
+          "resolve_common_unexpected_problems",
+          "agree_disagree_and_negotiate_politely"
+        ],
+        "skills": {
+          "reading": "Understand straightforward articles and narratives on familiar or current topics.",
+          "listening": "Understand main points of clear standard speech and organized media.",
+          "spoken_production": "Connect ideas to narrate, explain, compare and justify opinions.",
+          "written_production": "Write connected texts about experiences, plans and opinions.",
+          "interaction": "Sustain familiar conversation and solve most travel and service situations.",
+          "mediation": "Summarize main points and explain familiar information to others."
+        },
+        "content_limits": {
+          "reading_words_min": 400,
+          "reading_words_max": 700,
+          "paragraphs_min": 5,
+          "paragraphs_max": 7,
+          "questions_min": 5,
+          "questions_max": 6,
+          "writing_words_min": 140,
+          "writing_words_max": 220,
+          "audio_seconds_min": 120,
+          "audio_seconds_max": 240,
+          "new_lexical_items_min": 12,
+          "new_lexical_items_max": 20
+        },
+        "assessment_tasks": [
+          "summarize_article_or_interview",
+          "narrate_experience_with_detail",
+          "solve_travel_or_service_problem",
+          "write_supported_opinion",
+          "present_weekly_plan"
+        ]
+      },
+      "B2": {
+        "global_outcome": "Interact with relative fluency and produce detailed argument on concrete and abstract topics.",
+        "functions": [
+          "build_and_support_argument",
+          "compare_perspectives_benefits_risks_and_consequences",
+          "reformulate_synthesize_and_clarify",
+          "negotiate_solution_and_manage_disagreement",
+          "adjust_register_certainty_politeness_and_emphasis",
+          "participate_in_interviews_meetings_and_structured_discussion"
+        ],
+        "skills": {
+          "reading": "Understand articles, reports and narratives containing viewpoint, nuance and complex structure.",
+          "listening": "Follow extended speech and argument in a range of genres at controlled natural pace.",
+          "spoken_production": "Give clear detailed discourse and defend a viewpoint with supporting points.",
+          "written_production": "Write detailed structured texts appropriate to genre, audience and purpose.",
+          "interaction": "Participate actively, clarify, challenge and negotiate with relative spontaneity.",
+          "mediation": "Synthesize perspectives and make complex information accessible."
+        },
+        "content_limits": {
+          "reading_words_min": 650,
+          "reading_words_max": 1000,
+          "paragraphs_min": 5,
+          "paragraphs_max": 8,
+          "questions_min": 6,
+          "questions_max": 7,
+          "writing_words_min": 220,
+          "writing_words_max": 350,
+          "audio_seconds_min": 180,
+          "audio_seconds_max": 360,
+          "new_lexical_items_min": 15,
+          "new_lexical_items_max": 24
+        },
+        "assessment_tasks": [
+          "evaluate_multiple_viewpoints",
+          "defend_proposal_in_discussion",
+          "write_formal_or_analytical_text",
+          "synthesize_two_sources",
+          "negotiate_complex_solution"
+        ]
+      }
+    }
+  },
+  "language_curricula": {
+    "en": {
+      "A1": {
+        "grammar": [
+          "en.a1.be_subject_pronouns",
+          "en.a1.have_possession",
+          "en.a1.present_simple",
+          "en.a1.articles_plural_nouns",
+          "en.a1.possessives_demonstratives",
+          "en.a1.there_is_are",
+          "en.a1.can_ability_permission",
+          "en.a1.imperatives",
+          "en.a1.yes_no_wh_questions",
+          "en.a1.basic_prepositions",
+          "en.a1.some_any_basic_quantifiers"
+        ],
+        "pronunciation": ["th_sounds", "short_vs_long_i", "final_consonants", "word_stress", "plural_and_third_person_s"]
+      },
+      "A2": {
+        "grammar": [
+          "en.a2.present_continuous",
+          "en.a2.past_simple_regular_irregular",
+          "en.a2.going_to_and_will",
+          "en.a2.comparatives_superlatives",
+          "en.a2.frequency_manner_adverbs",
+          "en.a2.countable_uncountable_quantity",
+          "en.a2.should_must_have_to_may",
+          "en.a2.infinitive_gerund_introduction",
+          "en.a2.relative_clauses_who_which_that",
+          "en.a2.basic_connectors"
+        ],
+        "pronunciation": ["ed_endings", "weak_forms", "sentence_stress", "consonant_clusters", "question_intonation"]
+      },
+      "B1": {
+        "grammar": [
+          "en.b1.present_perfect_vs_past_simple",
+          "en.b1.past_continuous_narrative_tenses",
+          "en.b1.passive_basic",
+          "en.b1.zero_first_second_conditionals",
+          "en.b1.reported_speech_introduction",
+          "en.b1.modals_deduction_obligation_advice",
+          "en.b1.defining_nondefining_relatives",
+          "en.b1.gerund_infinitive_patterns",
+          "en.b1.frequent_phrasal_verbs",
+          "en.b1.narrative_discourse_markers"
+        ],
+        "pronunciation": ["connected_speech", "schwa_reduction", "thought_groups", "contrastive_stress", "repair_for_intelligibility"]
+      },
+      "B2": {
+        "grammar": [
+          "en.b2.perfect_and_perfect_continuous",
+          "en.b2.past_perfect_narrative_control",
+          "en.b2.advanced_passive",
+          "en.b2.advanced_reported_speech",
+          "en.b2.third_and_mixed_conditionals",
+          "en.b2.past_modals",
+          "en.b2.inversion_and_emphasis_introduction",
+          "en.b2.participle_clauses",
+          "en.b2.argumentative_discourse_markers",
+          "en.b2.collocation_register_and_idiom"
+        ],
+        "pronunciation": ["attitude_intonation", "focus_and_deaccenting", "natural_reduction", "complex_clusters", "register_and_pacing"]
+      }
+    },
+    "es": {
+      "A1": {
+        "grammar": [
+          "es.a1.gender_number_articles",
+          "es.a1.present_regular_frequent_irregular",
+          "es.a1.ser_estar_hay",
+          "es.a1.tener_ir_hacer",
+          "es.a1.gustar_basic",
+          "es.a1.subject_reflexive_pronouns",
+          "es.a1.possessives_demonstratives",
+          "es.a1.questions_and_negation",
+          "es.a1.a_de_en_con",
+          "es.a1.ir_a_infinitive"
+        ],
+        "pronunciation": ["five_vowels", "r_vs_rr", "j_and_soft_g", "b_v_equivalence", "word_stress_and_written_accent"]
+      },
+      "A2": {
+        "grammar": [
+          "es.a2.preterito_perfecto",
+          "es.a2.preterito_indefinido",
+          "es.a2.imperfecto_introduction",
+          "es.a2.direct_indirect_objects",
+          "es.a2.reflexive_and_basic_se",
+          "es.a2.comparison_and_quantity",
+          "es.a2.informal_imperative",
+          "es.a2.frequent_verbal_periphrases",
+          "es.a2.por_vs_para",
+          "es.a2.simple_relatives_and_connectors"
+        ],
+        "pronunciation": ["ll_y_variation", "c_z_s_variation", "no_epenthetic_vowel", "linking", "statement_question_intonation"]
+      },
+      "B1": {
+        "grammar": [
+          "es.b1.past_tense_contrast",
+          "es.b1.future_and_conditional",
+          "es.b1.present_subjunctive_frequent_uses",
+          "es.b1.expanded_imperative",
+          "es.b1.temporal_final_conditional_clauses",
+          "es.b1.reported_speech",
+          "es.b1.passive_and_impersonal_se",
+          "es.b1.expanded_periphrases",
+          "es.b1.object_pronoun_combinations",
+          "es.b1.discourse_connectors"
+        ],
+        "pronunciation": ["speech_groups", "rhythm_without_vowel_reduction", "regional_awareness", "contrastive_focus", "fluent_repairs"]
+      },
+      "B2": {
+        "grammar": [
+          "es.b2.perfect_and_imperfect_subjunctive",
+          "es.b2.unreal_conditionals",
+          "es.b2.concessive_clauses",
+          "es.b2.non_specific_relative_antecedents",
+          "es.b2.past_reported_speech",
+          "es.b2.advanced_se",
+          "es.b2.tense_sequence",
+          "es.b2.argumentative_markers",
+          "es.b2.nominalization_and_information_structure",
+          "es.b2.register_and_hispanic_variation"
+        ],
+        "pronunciation": ["stance_intonation", "rhetorical_grouping", "formal_informal_pacing", "regional_comprehension", "nuanced_emphasis"]
+      }
+    },
+    "fr": {
+      "A1": {
+        "grammar": [
+          "fr.a1.gender_number_articles",
+          "fr.a1.etre_avoir_aller_faire",
+          "fr.a1.present_er_and_frequent_verbs",
+          "fr.a1.negation_ne_pas",
+          "fr.a1.questions_basic",
+          "fr.a1.subject_and_stressed_pronouns",
+          "fr.a1.possessives_demonstratives",
+          "fr.a1.il_y_a",
+          "fr.a1.place_time_prepositions",
+          "fr.a1.partitives_and_quantity_basic",
+          "fr.a1.futur_proche"
+        ],
+        "pronunciation": ["u_vs_ou", "nasal_vowels_basic", "silent_final_consonants", "liaison_basic", "rhythmic_group"]
+      },
+      "A2": {
+        "grammar": [
+          "fr.a2.passe_compose",
+          "fr.a2.imparfait_introduction",
+          "fr.a2.futur_simple_introduction",
+          "fr.a2.direct_indirect_objects",
+          "fr.a2.y_en_introduction",
+          "fr.a2.comparison",
+          "fr.a2.pronominal_verbs",
+          "fr.a2.imperative",
+          "fr.a2.quantity_partitives_negation",
+          "fr.a2.relative_qui_que_ou",
+          "fr.a2.basic_connectors"
+        ],
+        "pronunciation": ["e_vowel_contrasts", "enchaînement", "mandatory_optional_liaison", "elision", "question_intonation"]
+      },
+      "B1": {
+        "grammar": [
+          "fr.b1.passe_compose_vs_imparfait",
+          "fr.b1.plus_que_parfait_introduction",
+          "fr.b1.future_and_conditional",
+          "fr.b1.frequent_subjunctive",
+          "fr.b1.si_hypotheses",
+          "fr.b1.expanded_relatives",
+          "fr.b1.y_en_control",
+          "fr.b1.reported_speech",
+          "fr.b1.passive",
+          "fr.b1.gerund_and_connectors"
+        ],
+        "pronunciation": ["connected_speech", "intonation_for_narration", "schwa_management", "thought_groups", "formal_vs_neutral_clarity"]
+      },
+      "B2": {
+        "grammar": [
+          "fr.b2.tense_agreement_and_sequence",
+          "fr.b2.expanded_subjunctive",
+          "fr.b2.unreal_conditionals",
+          "fr.b2.compound_relatives",
+          "fr.b2.past_reported_speech",
+          "fr.b2.passive_and_causative",
+          "fr.b2.nominalization",
+          "fr.b2.mise_en_relief",
+          "fr.b2.argumentative_connectors",
+          "fr.b2.formal_neutral_familiar_register"
+        ],
+        "pronunciation": ["stance_and_implication", "focus_contrast", "natural_reduction", "register_variation", "extended_discourse_pacing"]
+      }
+    },
+    "it": {
+      "A1": {
+        "grammar": [
+          "it.a1.gender_number_articles",
+          "it.a1.essere_avere_andare_fare",
+          "it.a1.present_regular_frequent_irregular",
+          "it.a1.ce_ci_sono",
+          "it.a1.negation_and_questions",
+          "it.a1.possessives_demonstratives",
+          "it.a1.potere_volere_dovere_basic",
+          "it.a1.simple_and_articulated_prepositions",
+          "it.a1.mi_piace",
+          "it.a1.basic_quantity"
+        ],
+        "pronunciation": ["double_consonants", "open_closed_vowels_awareness", "gli_gn", "sc_and_c_g", "word_stress"]
+      },
+      "A2": {
+        "grammar": [
+          "it.a2.passato_prossimo",
+          "it.a2.imperfetto_introduction",
+          "it.a2.futuro_semplice",
+          "it.a2.direct_indirect_pronouns",
+          "it.a2.reflexive_verbs",
+          "it.a2.comparison",
+          "it.a2.informal_imperative",
+          "it.a2.partitives_and_quantity",
+          "it.a2.ci_ne_introduction",
+          "it.a2.relative_che_cui",
+          "it.a2.basic_connectors"
+        ],
+        "pronunciation": ["s_and_z_variation", "r_control", "elision", "syntactic_strengthening_awareness", "question_intonation"]
+      },
+      "B1": {
+        "grammar": [
+          "it.b1.past_tense_contrast",
+          "it.b1.condizionale",
+          "it.b1.frequent_present_subjunctive",
+          "it.b1.real_and_possible_conditionals",
+          "it.b1.combined_pronouns",
+          "it.b1.passive_and_impersonal_si",
+          "it.b1.reported_speech",
+          "it.b1.gerund",
+          "it.b1.frequent_pronominal_verbs",
+          "it.b1.discourse_connectors"
+        ],
+        "pronunciation": ["connected_speech", "narrative_intonation", "contrastive_stress", "regional_awareness", "fluent_repairs"]
+      },
+      "B2": {
+        "grammar": [
+          "it.b2.past_and_imperfect_subjunctive",
+          "it.b2.tense_sequence",
+          "it.b2.unreal_conditionals",
+          "it.b2.past_reported_speech",
+          "it.b2.passive_and_causative_fare",
+          "it.b2.expanded_relatives",
+          "it.b2.idiomatic_ci_ne",
+          "it.b2.nominalization",
+          "it.b2.argumentative_connectors",
+          "it.b2.register_and_regional_variation"
+        ],
+        "pronunciation": ["stance_intonation", "rhetorical_grouping", "focus_and_emphasis", "formal_informal_pacing", "regional_comprehension"]
+      }
+    }
+  },
+  "exercise_policy": {
+    "minimum_items_per_concept": 5,
+    "required_item_families": [
+      "form_meaning_recognition",
+      "contextual_completion",
+      "brazilian_error_correction",
+      "transformation_or_reformulation",
+      "communicative_production"
+    ],
+    "advanced_contextual_item_ratio": {
+      "B1": 0.4,
+      "B2": 0.4
+    }
+  },
+  "mastery_policy": {
+    "minimum_correct_evidence": 3,
+    "minimum_distinct_sessions": 2,
+    "requires_productive_evidence": true,
+    "minimum_recent_accuracy": {
+      "A1": 0.8,
+      "A2": 0.8,
+      "B1": 0.75,
+      "B2": 0.75
+    },
+    "requires_delayed_retention_check": true,
+    "global_level_is_simple_average": false
+  }
+}

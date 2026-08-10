@@ -142,7 +142,15 @@ select public.save_learning_section_progress(
   'en',
   'reading',
   'A1',
-  'en-passage-a1-01',
+  (
+    select id
+    from public.reading_passages
+    where language = 'en'
+      and level = 'A1'
+      and is_published
+    order by id
+    limit 1
+  ),
   2,
   1,
   'activity'

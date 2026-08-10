@@ -1,0 +1,23 @@
+{
+  "migration": "supabase/migrations/20260810133258_generated_es_a1_reading.sql",
+  "candidate_ids": [
+    "generated-reading-es-a1-7ea2d3b08ff3",
+    "generated-reading-es-a1-2dccc8f309b9",
+    "generated-reading-es-a1-2524379251ca",
+    "generated-reading-es-a1-458be1a6dc36",
+    "generated-reading-es-a1-255310962fd0",
+    "generated-reading-es-a1-5ae50be7ecbc",
+    "generated-reading-es-a1-82ab77c37eca",
+    "generated-reading-es-a1-7c71942a4c78",
+    "generated-reading-es-a1-a6dbc0f8cce3",
+    "generated-reading-es-a1-560120f01df0",
+    "generated-reading-es-a1-590c34babcae",
+    "generated-reading-es-a1-b9030cf806c1",
+    "generated-reading-es-a1-8ad630778c46",
+    "generated-reading-es-a1-4ee3e2856490",
+    "generated-reading-es-a1-6dd8012ad97a",
+    "generated-reading-es-a1-92cf2820af04",
+    "generated-reading-es-a1-6546f5a4dc89"
+  ],
+  "published": true
+}

@@ -221,13 +221,24 @@ begin
     raise exception 'Quick lesson failure: B1/B2 need interpretation questions beyond cloze';
   end if;
 
-  if (
-    select count(*)
-    from public.reading_passages
-    where is_published
-  ) <> 160 then
-    raise exception 'Reading catalog failure: expected 160 passages';
-  end if;
+  for catalog_row in
+    select
+      required.language,
+      required_level.level,
+      count(passage.id) as passage_count
+    from unnest(array['en', 'es', 'fr', 'it']) as required(language)
+    cross join unnest(array['A1', 'A2', 'B1', 'B2']) as required_level(level)
+    left join public.reading_passages passage
+      on passage.language = required.language
+      and passage.level = required_level.level
+      and passage.is_published
+    group by required.language, required_level.level
+  loop
+    if catalog_row.passage_count < 10 then
+      raise exception 'Reading catalog failure: %/% has %, expected at least 10 passages',
+        catalog_row.language, catalog_row.level, catalog_row.passage_count;
+    end if;
+  end loop;
 
   if exists (
     select 1
@@ -250,11 +261,15 @@ begin
     where passage.is_published
       and passage.level in ('A1', 'A2')
       and (
-        position('___' in coalesce(question.value ->> 'prompt', '')) = 0
-        or jsonb_array_length(question.value -> 'options') <> 3
+        nullif(btrim(question.value ->> 'prompt'), '') is null
+        or jsonb_typeof(question.value -> 'options') <> 'array'
+        or jsonb_array_length(question.value -> 'options') not between 3 and 4
+        or (question.value ->> 'answer_index')::int < 0
+        or (question.value ->> 'answer_index')::int >= jsonb_array_length(question.value -> 'options')
+        or nullif(btrim(question.value ->> 'explanation_pt_br'), '') is null
       )
   ) then
-    raise exception 'Reading failure: A1/A2 questions must be text-aligned cloze prompts';
+    raise exception 'Reading failure: A1/A2 questions must have prompt, 3-4 options, answer and explanation';
   end if;
 
   if exists (

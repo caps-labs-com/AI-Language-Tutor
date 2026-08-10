@@ -246,6 +246,13 @@ function Demo({ go }: { go: (id: ScreenId) => void }) {
   const [interactions, setInteractions] = useState(1);
   const [messages, setMessages] = useState<Array<{ role: "user" | "tutor"; text: string }>>([]);
   const remaining = Math.max(0, 3 - interactions);
+
+  useEffect(() => {
+    if (remaining !== 0) return;
+    const redirect = window.setTimeout(() => go("signup"), 1800);
+    return () => window.clearTimeout(redirect);
+  }, [go, remaining]);
+
   const send = () => {
     const text = answer.trim();
     if (!text || remaining === 0) return;
@@ -302,7 +309,9 @@ function Demo({ go }: { go: (id: ScreenId) => void }) {
           <button className="send-button" disabled={!answer.trim() || remaining === 0} onClick={send} aria-label="Enviar resposta"><ArrowRight /></button>
         </div>
         <small className="demo-note">
-          {remaining > 0 ? `Você tem mais ${remaining} ${remaining === 1 ? "interação grátis" : "interações grátis"}` : "Gostou? Crie sua conta para conversar com o tutor de IA."}
+          {remaining > 0
+            ? `Você tem mais ${remaining} ${remaining === 1 ? "interação grátis" : "interações grátis"}`
+            : "Demonstração concluída. Abrindo a criação da sua conta..."}
         </small>
       </main>
     </div>
@@ -2177,13 +2186,16 @@ export default function ProductPrototype() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [planId, setPlanId] = useState("free");
+  const [planResolvedUserId, setPlanResolvedUserId] = useState<string | null>(null);
 
-  const refreshPlan = useCallback(async (accessToken: string) => {
+  const refreshPlan = useCallback(async (accessToken: string, userId: string) => {
     try {
       const summary = await loadEntitlements(accessToken);
       setPlanId(summary.plan_id);
     } catch {
       setPlanId("free");
+    } finally {
+      setPlanResolvedUserId(userId);
     }
   }, []);
 
@@ -2224,7 +2236,6 @@ export default function ProductPrototype() {
     }
 
     let active = true;
-    let suppressSignedOutRedirect = false;
     const initialize = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
@@ -2233,8 +2244,6 @@ export default function ProductPrototype() {
       if (currentSession && !isEmailConfirmed(currentSession.user)) {
         const unconfirmedEmail = currentSession.user.email?.trim().toLowerCase() || "";
         if (unconfirmedEmail) window.sessionStorage.setItem("lume:pending-email", unconfirmedEmail);
-        suppressSignedOutRedirect = true;
-        await supabase.auth.signOut({ scope: "local" });
         currentSession = null;
       }
       setSession(currentSession);
@@ -2272,10 +2281,11 @@ export default function ProductPrototype() {
         await Promise.all([
           loadStudiedLanguages(currentSession.user.id, mappedPreferences),
           refreshAdminAccess(currentSession.user.id),
-          refreshPlan(currentSession.access_token),
+          refreshPlan(currentSession.access_token, currentSession.user.id),
         ]);
       } else {
         setPlanId("free");
+        setPlanResolvedUserId(null);
       }
 
       const fromHash = window.location.hash.replace("#/", "") as ScreenId;
@@ -2300,10 +2310,8 @@ export default function ProductPrototype() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "SIGNED_OUT") {
         setSession(null);
-        if (suppressSignedOutRedirect) {
-          suppressSignedOutRedirect = false;
-          return;
-        }
+        setPlanId("free");
+        setPlanResolvedUserId(null);
         setPreferences(null);
         setStudiedLanguages([]);
         setIsAdmin(false);
@@ -2320,15 +2328,19 @@ export default function ProductPrototype() {
           setPendingEmail(unconfirmedEmail);
         }
         setSession(null);
+        setPlanId("free");
+        setPlanResolvedUserId(null);
         setScreen("confirm-email");
         window.history.replaceState(null, "", "#/confirm-email");
-        suppressSignedOutRedirect = true;
-        window.setTimeout(() => void supabase.auth.signOut({ scope: "local" }), 0);
         return;
       }
       setSession(nextSession);
       if (nextSession) {
         setDisplayName(nextSession.user.user_metadata.display_name || nextSession.user.email?.split("@")[0] || "Aluno");
+        if (event === "SIGNED_IN") {
+          setPlanResolvedUserId(null);
+          void refreshPlan(nextSession.access_token, nextSession.user.id);
+        }
       }
       if (event === "PASSWORD_RECOVERY") {
         setPasswordRecovery(true);
@@ -2391,7 +2403,7 @@ export default function ProductPrototype() {
     if (!session?.access_token) return;
     const refreshVisiblePlan = () => {
       if (document.visibilityState === "visible") {
-        void refreshPlan(session.access_token);
+        void refreshPlan(session.access_token, session.user.id);
       }
     };
     window.addEventListener("focus", refreshVisiblePlan);
@@ -2400,7 +2412,7 @@ export default function ProductPrototype() {
       window.removeEventListener("focus", refreshVisiblePlan);
       document.removeEventListener("visibilitychange", refreshVisiblePlan);
     };
-  }, [refreshPlan, session?.access_token]);
+  }, [refreshPlan, session]);
 
   const navigate = (id: ScreenId, replace = false) => {
     setScreen(id);
@@ -2475,14 +2487,12 @@ export default function ProductPrototype() {
         const normalizedEmail = form.email.trim().toLowerCase();
         window.sessionStorage.setItem("lume:pending-email", normalizedEmail);
         setPendingEmail(normalizedEmail);
-        if (data.session) {
-          await supabase.auth.signOut({ scope: "local" });
-        }
         navigate("confirm-email");
         return {};
       }
       setSession(data.session);
       setDisplayName(form.name.trim() || "Aluno");
+      await refreshPlan(data.session.access_token, data.session.user.id);
       navigate("onboarding");
       return {};
     }
@@ -2496,7 +2506,6 @@ export default function ProductPrototype() {
       const normalizedEmail = form.email.trim().toLowerCase();
       window.sessionStorage.setItem("lume:pending-email", normalizedEmail);
       setPendingEmail(normalizedEmail);
-      await supabase.auth.signOut({ scope: "local" });
       navigate("confirm-email");
       return {};
     }
@@ -2527,6 +2536,7 @@ export default function ProductPrototype() {
     await Promise.all([
       loadStudiedLanguages(data.user.id, mappedPreferences),
       refreshAdminAccess(data.user.id),
+      refreshPlan(data.session.access_token, data.user.id),
     ]);
     navigate(hasCompletedOnboarding ? "dashboard" : "onboarding");
     return {};
@@ -2550,18 +2560,17 @@ export default function ProductPrototype() {
   const checkConfirmation = async (): Promise<AuthFeedback> => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return { error: "A autenticação ainda não está configurada." };
-    const [{ data: sessionData }, { data: userData, error: userError }] = await Promise.all([
-      supabase.auth.getSession(),
-      supabase.auth.getUser(),
-    ]);
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (userError || !sessionData.session || !isEmailConfirmed(userData.user)) {
+    if (refreshError || userError || !refreshData.session || !isEmailConfirmed(userData.user)) {
       return { error: "Ainda não identificamos a confirmação. Abra o link no mesmo navegador e tente novamente." };
     }
 
     window.sessionStorage.removeItem("lume:pending-email");
     setPendingEmail("");
-    setSession(sessionData.session);
+    setSession(refreshData.session);
+    await refreshPlan(refreshData.session.access_token, refreshData.session.user.id);
     navigate("onboarding");
     return {};
   };
@@ -2693,7 +2702,7 @@ export default function ProductPrototype() {
     || recommendScenario(scenarios, preferences?.currentLevel || "unknown");
 
   const content = (() => {
-    if (authLoading) {
+    if (authLoading || Boolean(session && planResolvedUserId !== session.user.id)) {
       return <div className="app-loading"><Sparkles/><span>Preparando seu espaço...</span></div>;
     }
     switch (screen) {
@@ -2726,12 +2735,12 @@ export default function ProductPrototype() {
           go={go}
           onSubscribed={
             session?.access_token
-              ? () => refreshPlan(session.access_token)
+              ? () => refreshPlan(session.access_token, session.user.id)
               : undefined
           }
         />
       );
-      case "billing-success": return <BillingResultScreen session={session} variant="success" go={(id) => { if (session?.access_token) void refreshPlan(session.access_token); go(id); }}/>;
+      case "billing-success": return <BillingResultScreen session={session} variant="success" go={(id) => { if (session?.access_token) void refreshPlan(session.access_token, session.user.id); go(id); }}/>;
       case "billing-cancel": return <BillingResultScreen session={session} variant="cancel" go={go}/>;
       case "admin": return session ? <AdminPanel session={session} go={go}/> : null;
     }

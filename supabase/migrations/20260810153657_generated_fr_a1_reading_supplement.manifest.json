@@ -1,0 +1,11 @@
+{
+  "migration": "supabase/migrations/20260810153657_generated_fr_a1_reading_supplement.sql",
+  "candidate_ids": [
+    "generated-reading-fr-a1-b79790e365d7",
+    "generated-reading-fr-a1-6c59390cc2b7",
+    "generated-reading-fr-a1-d2c376639c70",
+    "generated-reading-fr-a1-0299d20c015a",
+    "generated-reading-fr-a1-c82cc7f8f6b7"
+  ],
+  "published": true
+}
