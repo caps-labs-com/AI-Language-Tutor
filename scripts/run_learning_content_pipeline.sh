@@ -13,6 +13,8 @@ content_type=""
 count="1"
 concept=""
 migration_output=""
+run_dir_override=""
+repair_attempts="2"
 
 usage() {
   cat <<'EOF'
@@ -29,6 +31,8 @@ Opções:
   --count N             Quantidade de candidatos (padrão: 1)
   --concept ID          Conceito da curriculum/cefr_matrix.json
   --output ARQUIVO      Caminho da migration SQL não publicada
+  --run-dir DIRETÓRIO   Diretório exato da execução (uso por orquestradores)
+  --repair-attempts N   Rodadas de reparo dos reprovados (padrão: 2)
   --env-file ARQUIVO    Arquivo com DEEPSEEK_API_KEY e DEEPSEEK_MODEL
   -h, --help            Exibe esta ajuda
 
@@ -50,6 +54,8 @@ while (($#)); do
     --count) count="${2:-}"; shift 2 ;;
     --concept) concept="${2:-}"; shift 2 ;;
     --output) migration_output="${2:-}"; shift 2 ;;
+    --run-dir) run_dir_override="${2:-}"; shift 2 ;;
+    --repair-attempts) repair_attempts="${2:-}"; shift 2 ;;
     --env-file) env_file="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Argumento desconhecido: $1" >&2; usage >&2; exit 2 ;;
@@ -61,6 +67,10 @@ case "$level" in A1|A2|B1|B2) ;; *) echo "--level inválido" >&2; exit 2 ;; esac
 case "$content_type" in reading|grammar|quick_lesson) ;; *) echo "--content-type inválido" >&2; exit 2 ;; esac
 if [[ ! "$count" =~ ^[1-9][0-9]*$ ]]; then
   echo "--count deve ser um inteiro maior que zero" >&2
+  exit 2
+fi
+if [[ ! "$repair_attempts" =~ ^[0-9]+$ ]]; then
+  echo "--repair-attempts deve ser um inteiro maior ou igual a zero" >&2
   exit 2
 fi
 if [[ "$language" == "all" && -n "$concept" ]]; then
@@ -101,7 +111,15 @@ if [[ -z "$deepseek_model" ]]; then
 fi
 
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-${language}-${level}-${content_type}"
-run_dir="${project_root}/.local/content-research/runs/${run_id}"
+if [[ -n "$run_dir_override" ]]; then
+  if [[ "$run_dir_override" == /* ]]; then
+    run_dir="$run_dir_override"
+  else
+    run_dir="${project_root}/${run_dir_override}"
+  fi
+else
+  run_dir="${project_root}/.local/content-research/runs/${run_id}"
+fi
 audit_file="${run_dir}/audit.jsonl"
 audit_summary="${run_dir}/audit-summary.json"
 candidates_file="${run_dir}/candidates.jsonl"
@@ -147,6 +165,7 @@ for current_language in "${languages[@]}"; do
   if ! DEEPSEEK_API_KEY="$deepseek_api_key" "${generate_command[@]}"; then
     generation_failures+=("$current_language")
     echo "Aviso: não foi possível gerar conteúdo para $current_language." >&2
+    echo "Para retomar este diretório, repita o comando com: --run-dir $run_dir" >&2
   fi
 done
 unset deepseek_api_key
@@ -166,8 +185,29 @@ if ((validation_status > 1)); then
   echo "A validação falhou com erro operacional (status $validation_status)." >&2
   exit "$validation_status"
 fi
+repair_round=0
+while ((validation_status == 1 && repair_round < repair_attempts)); do
+  repair_round=$((repair_round + 1))
+  echo "[3/4] Reparando candidatos reprovados (rodada $repair_round/$repair_attempts)..."
+  DEEPSEEK_API_KEY="$(read_env_value DEEPSEEK_API_KEY)" \
+    python3 scripts/repair_learning_candidates.py \
+      --candidates "$candidates_file" \
+      --validated "$validated_file" \
+      --provider deepseek \
+      --model "$deepseek_model" \
+      --repair-round "$repair_round"
+  validation_status=0
+  python3 scripts/validate_learning_candidates.py \
+    --input "$candidates_file" \
+    --audit "$audit_file" \
+    --output "$validated_file" || validation_status=$?
+  if ((validation_status > 1)); then
+    echo "A revalidação falhou com erro operacional (status $validation_status)." >&2
+    exit "$validation_status"
+  fi
+done
 if ((validation_status == 1)); then
-  echo "Aviso: alguns candidatos foram rejeitados; somente os aprovados entrarão na migration." >&2
+  echo "Aviso: ainda há candidatos rejeitados; somente os aprovados entrarão na migration." >&2
 fi
 
 echo "[4/4] Criando migration revisável e não publicada..."

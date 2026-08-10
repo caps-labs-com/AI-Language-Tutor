@@ -64,6 +64,11 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path)
     parser.add_argument(
+        "--manifest-output",
+        type=Path,
+        help="Optional manifest path; defaults next to the migration",
+    )
+    parser.add_argument(
         "--publish",
         action="store_true",
         help="Publish immediately; default is safe unpublished staging",
@@ -102,7 +107,8 @@ def main() -> int:
     header = "-- GENERATED FILE: review source provenance and content before applying.\n-- Content is unpublished unless --publish was explicitly used.\n\n"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(header + "\n\n".join(statements) + "\n", encoding="utf-8")
-    manifest = output.with_suffix(".manifest.json")
+    manifest = args.manifest_output or output.with_suffix(".manifest.json")
+    manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(
         json.dumps(
             {

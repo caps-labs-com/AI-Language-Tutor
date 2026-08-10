@@ -255,3 +255,45 @@ def json_sql(value: Any) -> str:
         sql_literal(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
         + "::jsonb"
     )
+
+
+def canonicalize_content(content_type: str, value: dict[str, Any]) -> dict[str, Any]:
+    """Normalize common model response variants into the database contract."""
+    content = dict(value)
+    if content_type != "grammar":
+        return content
+    if isinstance(content.get("grammar"), dict):
+        content = dict(content["grammar"])
+    for key in ("use_cases", "common_mistakes", "notes_pt_br"):
+        if isinstance(content.get(key), str) and content[key].strip():
+            content[key] = [content[key].strip()]
+    exercises = content.get("exercises")
+    if not isinstance(exercises, list):
+        return content
+    normalized = []
+    for index, raw in enumerate(exercises, 1):
+        if not isinstance(raw, dict):
+            normalized.append(raw)
+            continue
+        exercise = dict(raw)
+        exercise.setdefault("title", f"Exercício {index}")
+        if "question" not in exercise and isinstance(exercise.get("prompt"), str):
+            exercise["question"] = exercise["prompt"]
+        if "explanation" not in exercise and isinstance(
+            exercise.get("explanation_pt_br"), str
+        ):
+            exercise["explanation"] = exercise["explanation_pt_br"]
+        if "example" not in exercise:
+            question = exercise.get("question")
+            options = exercise.get("options")
+            answer = exercise.get("answer_index")
+            if (
+                isinstance(question, str)
+                and isinstance(options, list)
+                and isinstance(answer, int)
+                and 0 <= answer < len(options)
+            ):
+                exercise["example"] = question.replace("___", str(options[answer]))
+        normalized.append(exercise)
+    content["exercises"] = normalized
+    return content

@@ -153,6 +153,12 @@ criação de um conteúdo original A1, portanto essa diferença gera um aviso, n
 uma reprovação. O nível solicitado é aplicado ao prompt e obrigatório na
 validação do candidato final.
 
+Quando não existe fonte aprovada exatamente no nível solicitado, o gerador pode
+usar fontes aprovadas de outros níveis do mesmo idioma e categoria, priorizando
+as mais próximas. Para gramática, vários candidatos são distribuídos em ciclo
+pelos conceitos previstos na matriz curricular; `--concept` continua permitindo
+fixar um único conceito explicitamente.
+
 2. Gere conteúdo original a partir de fontes aprovadas. Execute por idioma, nível e tipo. O modo `mock` permite validar o pipeline sem custo:
 
 ```bash
@@ -219,6 +225,43 @@ scripts/run_learning_content_pipeline.sh \
 O script continua quando um candidato é rejeitado e envia somente os aprovados
 para a migration. Se faltar fonte aprovada para algum idioma, ele processa os
 demais, informa a execução parcial e termina com status diferente de zero.
+
+## Substituição completa de um nível
+
+Para executar os quatro idiomas e os três tipos de conteúdo com 50 candidatos
+por combinação:
+
+```bash
+scripts/run_level_content_pipeline.sh --level A1 --confirm-cost
+```
+
+Isso representa até 600 chamadas à DeepSeek. O lote executa 12 vezes o pipeline
+individual e mantém os artefatos em `.local/content-research/batches/`. Somente
+se todas as combinações concluírem ele cria duas migrations consecutivas:
+
+1. exclusão de `reading_passages`, `quick_lessons` e `grammar_topics` do nível;
+2. inserção publicada dos candidatos aprovados.
+
+Se uma combinação falhar, nenhuma migration destrutiva é criada. Os arquivos
+SQL são apenas gerados em `supabase/migrations`; o script não aplica migrations,
+não adiciona arquivos ao Git e não faz commit.
+
+Para retomar um lote interrompido sem repetir combinações validadas:
+
+```bash
+scripts/run_level_content_pipeline.sh \
+  --level A1 --count 50 --confirm-cost \
+  --resume .local/content-research/batches/ID-DO-LOTE
+```
+
+O gerador salva um checkpoint após cada candidato. Respostas vazias, JSON em
+bloco Markdown e falhas temporárias da API são tratadas com até três tentativas.
+
+Após a primeira validação, o pipeline normaliza variações equivalentes de
+schema e reenvia somente os candidatos ainda rejeitados ao modelo, incluindo os
+motivos objetivos da reprovação. Por padrão são realizadas até duas rodadas de
+reparo; ajuste com `--repair-attempts N` ou use zero para desabilitar. Cada
+reparo é revalidado e registrado em `generation.repair_history`.
 
 Teste offline dos invariantes:
 

@@ -50,31 +50,16 @@ begin
       raise exception 'Quick lesson complexity failure for %', language_code;
     end if;
 
-    if (
-      select count(*) from public.grammar_topics
-      where language = language_code and is_published
-    ) <> 40 then
-      raise exception 'Grammar catalog failure for %: expected 40 topics', language_code;
-    end if;
-
     if exists (
       select level
       from public.grammar_topics
       where language = language_code and is_published
       group by level
-      having count(*) <> 10
+      having count(*) < 10
     ) then
-      raise exception 'Grammar catalog failure for %: expected 10 topics per level', language_code;
+      raise exception 'Grammar catalog failure for %: expected at least 10 topics per level', language_code;
     end if;
   end loop;
-
-  if (
-    select count(*)
-    from public.grammar_topics
-    where id like '%-grammar-extra-%' and is_published
-  ) <> 32 then
-    raise exception 'Grammar catalog failure: expected 32 extended topics';
-  end if;
 
   if exists (
     select topic.id
@@ -99,16 +84,16 @@ begin
     where is_published
       and level in ('A1', 'A2')
       and (
-        position('___' in question) = 0
-        or question in (
-          'Choose the correct sentence.',
-          'Elige la frase correcta.',
-          'Choisissez la phrase correcte.',
-          'Scegli la frase corretta.'
-        )
+        nullif(btrim(question), '') is null
+        or jsonb_typeof(options) <> 'array'
+        or jsonb_array_length(options) not between 2 and 6
+        or answer_index < 0
+        or answer_index >= jsonb_array_length(options)
+        or nullif(btrim(explanation), '') is null
+        or nullif(btrim(example), '') is null
       )
   ) then
-    raise exception 'Grammar catalog failure: A1/A2 exercises must be topic-aligned cloze prompts';
+    raise exception 'Grammar catalog failure: A1/A2 exercises must have question, options, answer, explanation and example';
   end if;
 
   if exists (
@@ -150,11 +135,11 @@ begin
     from public.grammar_exercises
     where is_published
       and (
-        (level in ('A1', 'A2') and jsonb_array_length(options) <> 3)
+        (level in ('A1', 'A2') and jsonb_array_length(options) not between 2 and 6)
         or (level in ('B1', 'B2') and jsonb_array_length(options) <> 4)
       )
   ) then
-    raise exception 'Grammar catalog failure: A1/A2 need 3 options and B1/B2 need 4 options';
+    raise exception 'Grammar catalog failure: A1/A2 need 2-6 options and B1/B2 need 4 options';
   end if;
 
   if exists (

@@ -13,6 +13,7 @@ from typing import Any
 from content_pipeline_common import (
     QUICK_QUESTION_COUNTS,
     READING_QUESTION_COUNTS,
+    canonicalize_content,
     detect_language,
     estimate_cefr,
     load_curriculum,
@@ -124,6 +125,8 @@ def validate(
     ):
         errors.append("invalid_content_type_or_content")
         content = {}
+    else:
+        content = canonicalize_content(kind, content)
     allowed_concepts = (
         set(curriculum["language_curricula"][language][level]["grammar"])
         if supported
@@ -144,14 +147,19 @@ def validate(
     ):
         errors.append("source_not_approved")
     add_length(errors, content.get("title"), "title", 1, 160)
-    target_text = str(
-        content.get("body")
-        or " ".join(
-            str(item.get("example", ""))
+    target_text = str(content.get("body") or "")
+    if kind == "grammar":
+        target_text = " ".join(
+            " ".join(
+                (
+                    str(item.get("question", "")),
+                    str(item.get("example", "")),
+                    " ".join(str(option) for option in item.get("options", [])),
+                )
+            )
             for item in content.get("exercises", [])
             if isinstance(item, dict)
         )
-    )
     detected, language_confidence, _ = detect_language(target_text)
     if detected != language or language_confidence < 0.4:
         errors.append("generated_target_language_mismatch")
@@ -213,7 +221,13 @@ def validate(
             if (
                 not isinstance(value, list)
                 or not minimum <= len(value) <= 8
-                or any(not isinstance(item, str) or not item.strip() for item in value)
+                or any(
+                    not (
+                        (isinstance(item, str) and item.strip())
+                        or (isinstance(item, dict) and item)
+                    )
+                    for item in value
+                )
             ):
                 errors.append(f"{key}_invalid")
         exercises = content.get("exercises")
@@ -222,7 +236,11 @@ def validate(
         else:
             validate_questions(
                 [
-                    {**item, "explanation_pt_br": item.get("explanation", "")}
+                    {
+                        **item,
+                        "prompt": item.get("question", ""),
+                        "explanation_pt_br": item.get("explanation", ""),
+                    }
                     for item in exercises
                     if isinstance(item, dict)
                 ],
@@ -251,6 +269,7 @@ def validate(
     if maximum_similarity > similarity_limit:
         errors.append("source_similarity_above_limit")
     result = dict(candidate)
+    result["content"] = content
     result["status"] = "approved" if not errors else "rejected"
     result["validation"] = {
         "validated_at": now_iso(),

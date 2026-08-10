@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from content_pipeline_common import detect_language, estimate_cefr
-from generate_learning_candidates import mock_content
+from generate_learning_candidates import mock_content, parse_model_json, select_sources
 from validate_learning_candidates import (
     ngram_containment,
     validate_questions,
@@ -60,6 +60,42 @@ class ContentPipelineTests(unittest.TestCase):
             self.assertEqual(
                 len(mock_content("reading", "en", level, "x")["questions"]), count
             )
+
+    def test_source_selection_falls_back_to_nearby_level(self) -> None:
+        records = [
+            {
+                "approved": True,
+                "requested_language": "it",
+                "requested_level": "A2",
+                "category": "explanation",
+                "url": "https://example.test/italiano-l2",
+                "relevance_score": 0.9,
+                "quality_score": 0.8,
+            }
+        ]
+        selected = select_sources(records, "it", "A1", {"explanation"}, 4)
+        self.assertEqual(selected, records)
+
+    def test_grammar_mock_uses_database_question_field(self) -> None:
+        content = mock_content("grammar", "it", "A1", "it.a1.example")
+        self.assertTrue(
+            all(exercise.get("question") for exercise in content["exercises"])
+        )
+
+    def test_grammar_canonicalizer_wraps_singular_notes(self) -> None:
+        from content_pipeline_common import canonicalize_content
+
+        content = canonicalize_content(
+            "grammar", {"notes_pt_br": "Uma observação.", "exercises": []}
+        )
+        self.assertEqual(content["notes_pt_br"], ["Uma observação."])
+
+    def test_model_json_parser_accepts_markdown_fence(self) -> None:
+        self.assertEqual(parse_model_json('```json\n{"ok": true}\n```'), {"ok": True})
+
+    def test_model_json_parser_rejects_empty_content(self) -> None:
+        with self.assertRaisesRegex(ValueError, "empty"):
+            parse_model_json("")
 
 
 if __name__ == "__main__":
