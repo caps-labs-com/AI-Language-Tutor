@@ -4,6 +4,11 @@ import test from "node:test";
 
 import { calculateDashboardMetrics } from "../src/lib/progress.ts";
 import {
+  normalizeGrammarMistakes,
+  normalizeGrammarNotes,
+  normalizeGrammarUseCases,
+} from "../src/lib/learning-content.ts";
+import {
   formatElapsed,
   recommendScenario,
   sessionProgressPercent,
@@ -39,6 +44,22 @@ test("usuário com onboarding concluído não refaz o onboarding", () => {
 test("telas públicas continuam acessíveis", () => {
   assert.equal(resolveDestination("landing", false, false), "landing");
   assert.equal(resolveDestination("demo", false, false), "demo");
+});
+
+test("catálogo gramatical aceita conteúdo gerado em formato textual", () => {
+  assert.deepEqual(normalizeGrammarUseCases(["Usado para apresentar uma pessoa."]), [{
+    title: "Caso 1",
+    explanation: "Usado para apresentar uma pessoa.",
+    examples: [],
+  }]);
+  assert.deepEqual(normalizeGrammarMistakes(["Não traduza literalmente do português."]), [{
+    incorrect: "Evite",
+    correct: "Forma recomendada",
+    explanation: "Não traduza literalmente do português.",
+  }]);
+  assert.deepEqual(normalizeGrammarNotes("Leia os exemplos em voz alta."), [
+    "Leia os exemplos em voz alta.",
+  ]);
 });
 
 test("rascunhos de onboarding são isolados por usuário", () => {

@@ -110,6 +110,67 @@ export type LearnerLearningProgress = {
   sections: LearningSectionProgress[];
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function textValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+export function normalizeGrammarUseCases(value: unknown): GrammarUseCase[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item, index) => {
+    if (typeof item === "string" && item.trim()) {
+      return [{ title: `Caso ${index + 1}`, explanation: item.trim(), examples: [] }];
+    }
+    if (!isRecord(item)) return [];
+    const rawExamples = Array.isArray(item.examples) ? item.examples : [];
+    const examples = rawExamples.flatMap((example) => {
+      if (typeof example === "string" && example.trim()) {
+        return [{ target: example.trim(), translation: "" }];
+      }
+      if (!isRecord(example)) return [];
+      const target = textValue(example.target);
+      if (!target) return [];
+      return [{
+        target,
+        translation: textValue(example.translation_pt_br ?? example.translation),
+      }];
+    });
+    return [{
+      title: textValue(item.title_pt_br ?? item.title, `Caso ${index + 1}`),
+      explanation: textValue(item.explanation_pt_br ?? item.explanation),
+      examples,
+    }];
+  });
+}
+
+export function normalizeGrammarMistakes(value: unknown): GrammarMistake[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string" && item.trim()) {
+      return [{ incorrect: "Evite", correct: "Forma recomendada", explanation: item.trim() }];
+    }
+    if (!isRecord(item)) return [];
+    const explanation = textValue(item.explanation_pt_br ?? item.explanation);
+    const incorrect = textValue(item.incorrect, "Evite");
+    const correct = textValue(item.correct, "Forma recomendada");
+    if (!explanation && incorrect === "Evite" && correct === "Forma recomendada") return [];
+    return [{ incorrect, correct, explanation }];
+  });
+}
+
+export function normalizeGrammarNotes(value: unknown): string[] {
+  if (!Array.isArray(value)) return typeof value === "string" && value.trim() ? [value.trim()] : [];
+  return value.flatMap((item) => {
+    if (typeof item === "string" && item.trim()) return [item.trim()];
+    if (!isRecord(item)) return [];
+    const note = textValue(item.note ?? item.text ?? item.explanation_pt_br ?? item.explanation);
+    return note ? [note] : [];
+  });
+}
+
 export async function loadLearnerLearningProgress(
   supabase: SupabaseClient,
   userId: string,
@@ -246,28 +307,9 @@ export async function loadLearningContent(
       title: row.title,
       overview: row.overview_pt_br,
       formation: row.formation_pt_br,
-      useCases: (row.use_cases as Array<{
-        title_pt_br: string;
-        explanation_pt_br: string;
-        examples: Array<{ target: string; translation_pt_br: string }>;
-      }>).map((useCase) => ({
-        title: useCase.title_pt_br,
-        explanation: useCase.explanation_pt_br,
-        examples: useCase.examples.map((example) => ({
-          target: example.target,
-          translation: example.translation_pt_br,
-        })),
-      })),
-      commonMistakes: (row.common_mistakes as Array<{
-        incorrect: string;
-        correct: string;
-        explanation_pt_br: string;
-      }>).map((mistake) => ({
-        incorrect: mistake.incorrect,
-        correct: mistake.correct,
-        explanation: mistake.explanation_pt_br,
-      })),
-      notes: row.notes_pt_br as string[],
+      useCases: normalizeGrammarUseCases(row.use_cases),
+      commonMistakes: normalizeGrammarMistakes(row.common_mistakes),
+      notes: normalizeGrammarNotes(row.notes_pt_br),
     })),
     grammarExercises: (grammarExercisesResult.data || []).map((row) => ({
       id: row.id,
