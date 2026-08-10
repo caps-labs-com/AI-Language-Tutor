@@ -257,6 +257,12 @@ scripts/run_level_content_pipeline.sh \
 O gerador salva um checkpoint após cada candidato. Respostas vazias, JSON em
 bloco Markdown e falhas temporárias da API são tratadas com até três tentativas.
 
+Cada combinação de idioma e tipo precisa ter pelo menos 15 candidatos
+aprovados. Se ficar abaixo disso, o orquestrador retoma o mesmo diretório e tenta
+reparar os reprovados até duas vezes. Esses valores podem ser ajustados com
+`--minimum-approved N` e `--combination-retries N`. Se o mínimo continuar não
+atendido, o lote para sem criar a migration de exclusão.
+
 Após a primeira validação, o pipeline normaliza variações equivalentes de
 schema e reenvia somente os candidatos ainda rejeitados ao modelo, incluindo os
 motivos objetivos da reprovação. Por padrão são realizadas até duas rodadas de

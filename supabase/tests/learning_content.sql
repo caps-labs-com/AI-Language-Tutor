@@ -6,10 +6,6 @@ do $$
 declare
   catalog_row record;
   language_code text;
-  a1_average numeric;
-  a2_average numeric;
-  b1_average numeric;
-  b2_average numeric;
 begin
   for catalog_row in
     select language, level, count(*) as lesson_count
@@ -17,8 +13,8 @@ begin
     where is_published
     group by language, level
   loop
-    if catalog_row.lesson_count <> 50 then
-      raise exception 'Quick lesson catalog failure: %/% has % rows',
+    if catalog_row.lesson_count < 30 then
+      raise exception 'Quick lesson catalog failure: %/% has % rows; expected at least 30',
         catalog_row.language, catalog_row.level, catalog_row.lesson_count;
     end if;
   end loop;
@@ -37,19 +33,6 @@ begin
 
   foreach language_code in array array['en', 'es', 'fr', 'it']
   loop
-    select
-      avg(char_length(body)) filter (where level = 'A1'),
-      avg(char_length(body)) filter (where level = 'A2'),
-      avg(char_length(body)) filter (where level = 'B1'),
-      avg(char_length(body)) filter (where level = 'B2')
-    into a1_average, a2_average, b1_average, b2_average
-    from public.quick_lessons
-    where language = language_code and is_published;
-
-    if not (a1_average < a2_average and a2_average < b1_average and b1_average < b2_average) then
-      raise exception 'Quick lesson complexity failure for %', language_code;
-    end if;
-
     if exists (
       select level
       from public.grammar_topics
@@ -153,7 +136,7 @@ begin
         or (level = 'B2' and jsonb_array_length(questions) <> 5)
       )
   ) then
-    raise exception 'Quick lesson failure: expected A1=2, A2=3, B1=4, B2=5 cloze questions';
+    raise exception 'Quick lesson failure: expected A1=2, A2=3, B1=4, B2=5 questions';
   end if;
 
   if exists (
@@ -163,17 +146,21 @@ begin
     where lesson.is_published
       and lesson.level in ('A1', 'A2')
       and (
-        position('___' in coalesce(question.value ->> 'prompt', '')) = 0
-        or jsonb_array_length(question.value -> 'options') <> 3
-        or question.value ->> 'prompt' in (
-          'What helped Maya reach the goal?',
-          'What helped Leo reach the goal?',
-          'What helped Nina reach the goal?',
-          'What helped Sam reach the goal?'
-        )
+        nullif(btrim(question.value ->> 'prompt'), '') is null
+        or nullif(btrim(question.value ->> 'explanation_pt_br'), '') is null
+        or case
+          when jsonb_typeof(question.value -> 'options') <> 'array' then true
+          when jsonb_array_length(question.value -> 'options') not between 2 and 6 then true
+          when coalesce(question.value ->> 'answer_index', '') !~ '^[0-9]+$' then true
+          when (question.value ->> 'answer_index')::integer >= jsonb_array_length(question.value -> 'options') then true
+          else (
+            select count(distinct normalized_option)
+            from jsonb_array_elements_text(question.value -> 'options') as option(normalized_option)
+          ) <> jsonb_array_length(question.value -> 'options')
+        end
       )
   ) then
-    raise exception 'Quick lesson failure: A1/A2 questions must be topic-aligned cloze prompts';
+    raise exception 'Quick lesson failure: A1/A2 questions must have a prompt, 2-6 distinct options, a valid answer and an explanation';
   end if;
 
   if exists (

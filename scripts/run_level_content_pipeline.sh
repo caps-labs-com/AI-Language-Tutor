@@ -11,6 +11,8 @@ count="50"
 confirmed="false"
 migrations_dir="${project_root}/supabase/migrations"
 resume_dir=""
+minimum_approved="15"
+combination_retries="2"
 
 usage() {
   cat <<'EOF'
@@ -23,6 +25,8 @@ Opções:
   --confirm-cost        Confirma até 4 × 3 × count chamadas à DeepSeek
   --migrations-dir DIR  Destino das duas migrations
   --resume DIRETÓRIO    Retoma um lote existente em .local
+  --minimum-approved N  Mínimo aprovado por idioma/tipo (padrão: 15)
+  --combination-retries N  Retentativas se ficar abaixo do mínimo (padrão: 2)
   -h, --help            Exibe esta ajuda
 
 O script executa, para en/es/fr/it, os tipos reading, grammar e quick_lesson.
@@ -39,6 +43,8 @@ while (($#)); do
     --confirm-cost) confirmed="true"; shift ;;
     --migrations-dir) migrations_dir="${2:-}"; shift 2 ;;
     --resume) resume_dir="${2:-}"; shift 2 ;;
+    --minimum-approved) minimum_approved="${2:-}"; shift 2 ;;
+    --combination-retries) combination_retries="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Argumento desconhecido: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -47,6 +53,18 @@ done
 case "$level" in A1|A2|B1|B2) ;; *) echo "--level inválido" >&2; exit 2 ;; esac
 if [[ ! "$count" =~ ^[1-9][0-9]*$ ]]; then
   echo "--count deve ser um inteiro maior que zero" >&2
+  exit 2
+fi
+if [[ ! "$minimum_approved" =~ ^[1-9][0-9]*$ ]]; then
+  echo "--minimum-approved deve ser um inteiro maior que zero" >&2
+  exit 2
+fi
+if [[ ! "$combination_retries" =~ ^[0-9]+$ ]]; then
+  echo "--combination-retries deve ser um inteiro maior ou igual a zero" >&2
+  exit 2
+fi
+if ((minimum_approved > count)); then
+  echo "--minimum-approved não pode ser maior que --count" >&2
   exit 2
 fi
 
@@ -85,15 +103,43 @@ languages=(en es fr it)
 content_types=(reading grammar quick_lesson)
 completed=0
 
+approved_in_file() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+approved = 0
+for line in open(sys.argv[1], encoding="utf-8"):
+    record = json.loads(line)
+    if record.get("status") == "approved" and record.get("validation", {}).get("errors") == []:
+        approved += 1
+print(approved)
+PY
+}
+
 cd "$project_root"
 for current_language in "${languages[@]}"; do
   for current_type in "${content_types[@]}"; do
     completed=$((completed + 1))
     run_dir="${batch_dir}/runs/${current_language}-${current_type}"
     echo "[$completed/12] ${current_language}/${level}/${current_type}: $count candidatos"
-    if [[ -s "${run_dir}/validated-candidates.jsonl" ]]; then
-      echo "  Reutilizando combinação já validada."
-    else
+    retries_used=0
+    while true; do
+      current_approved=0
+      if [[ -s "${run_dir}/validated-candidates.jsonl" ]]; then
+        current_approved="$(approved_in_file "${run_dir}/validated-candidates.jsonl")"
+        echo "  Aprovados: $current_approved/$count; mínimo: $minimum_approved."
+        if ((current_approved >= minimum_approved)); then
+          break
+        fi
+        if ((retries_used >= combination_retries)); then
+          echo "${current_language}/${current_type} permaneceu abaixo de $minimum_approved aprovados após $combination_retries retentativas." >&2
+          echo "Nenhuma migration de exclusão foi criada. Resultados: $batch_dir" >&2
+          exit 1
+        fi
+        retries_used=$((retries_used + 1))
+        echo "  Retentativa $retries_used/$combination_retries: reparando os reprovados."
+      fi
       if ! scripts/run_learning_content_pipeline.sh \
         --language "$current_language" \
         --level "$level" \
@@ -105,7 +151,7 @@ for current_language in "${languages[@]}"; do
         echo "Retome com: $0 --level $level --count $count --confirm-cost --resume $batch_dir" >&2
         exit 1
       fi
-    fi
+    done
     if [[ ! -s "${run_dir}/validated-candidates.jsonl" ]]; then
       echo "Validação ausente para ${current_language}/${current_type}." >&2
       echo "Nenhuma migration de exclusão foi criada." >&2
