@@ -596,13 +596,12 @@ export function Conversation({
                 {message.role === "tutor" && <div className="mini-avatar">Lu</div>}
                 <div>
                   <span lang={targetLanguage}>{message.content}</span>
-                  {message.role === "tutor" && (
+                  {message.role === "tutor" && isPremiumPlan(planId) && (
                     <SpeechPlayback
                       text={message.content}
                       language={targetLanguage}
                       accessToken={accessToken}
-                      enabled={isPremiumPlan(planId)}
-                      onUpgrade={onUpgrade}
+                      enabled
                     />
                   )}
                 </div>
@@ -618,14 +617,15 @@ export function Conversation({
                     <ArrowRight size={15} aria-hidden="true" focusable="false" />
                     <ins lang={targetLanguage}>{message.correction.corrected}</ins>
                   </div>
-                  <SpeechPlayback
-                    text={message.correction.corrected}
-                    language={targetLanguage}
-                    accessToken={accessToken}
-                    enabled={isPremiumPlan(planId)}
-                    label="Ouvir correção"
-                    onUpgrade={onUpgrade}
-                  />
+                  {isPremiumPlan(planId) && (
+                    <SpeechPlayback
+                      text={message.correction.corrected}
+                      language={targetLanguage}
+                      accessToken={accessToken}
+                      enabled
+                      label="Ouvir correção"
+                    />
+                  )}
                   <p lang="pt-BR">{message.correction.explanation_pt_br}</p>
                 </div>
               )}
@@ -986,14 +986,13 @@ export function ConversationSummary({
                   <span key={item.term}>
                     {item.term}
                     <small>{item.translation_pt_br}</small>
-                    {accessToken && (
+                    {accessToken && isPremiumPlan(planId) && (
                       <SpeechPlayback
                         text={item.term}
                         language={targetLanguage}
                         accessToken={accessToken}
-                        enabled={isPremiumPlan(planId)}
+                        enabled
                         label="Ouvir"
-                        onUpgrade={onUpgrade}
                       />
                     )}
                   </span>

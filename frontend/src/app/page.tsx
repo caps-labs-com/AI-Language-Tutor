@@ -57,6 +57,7 @@ import {
 } from "@/components/conversation";
 import { categoryLabels, levelRange, renderScenarioIcon } from "@/components/scenario-icons";
 import { SessionHistory } from "@/components/sessions";
+import { SpeechPlayback } from "@/components/speech-playback";
 import { Brand, Button, ProgressRing, Stat } from "@/components/ui";
 import {
   loadScenarioCatalog,
@@ -279,7 +280,7 @@ function Demo({ go }: { go: (id: ScreenId) => void }) {
           <span className="level-chip">A2</span>
         </div>
         <div className="chat-stream">
-          <div className="chat-message tutor-message"><div className="mini-avatar">Lu</div><div><span>Good morning! What can I get for you today?</span><button disabled title="Áudio disponível em uma etapa futura"><Volume2 size={15} /> Ouvir</button></div></div>
+          <div className="chat-message tutor-message"><div className="mini-avatar">Lu</div><div><span>Good morning! What can I get for you today?</span></div></div>
           <div className="chat-message user-message"><div><span>I want one coffee with milk, please.</span><small>Agora</small></div></div>
           <div className="inline-feedback">
             <div className="feedback-title"><CheckCircle2 /><strong>Boa resposta!</strong><span>1 ajuste</span></div>
@@ -1375,6 +1376,7 @@ function LearningCenter({
   initialMode?: LearningMode;
   goToScenarios: () => void;
 }) {
+  const { planId, goToPricing } = useLearner();
   const language = preferences?.targetLanguage || "en";
   const preferredLevel = (["A1", "A2", "B1", "B2"].includes(preferences?.currentLevel || "")
     ? preferences?.currentLevel
@@ -2143,6 +2145,18 @@ function LearningCenter({
                 <p>{flipped ? item.explanation || item.prompt : item.prompt}</p>
                 <span>{flipped ? "Você consegue lembrar agora?" : "Toque para ver a correção"}</span>
               </button>
+              {flipped && planId === "premium" && session?.access_token && (
+                <div className="review-speech">
+                  <SpeechPlayback
+                    text={item.correctAnswer}
+                    language={language}
+                    accessToken={session.access_token}
+                    enabled
+                    label="Ouvir correção"
+                    onUpgrade={goToPricing}
+                  />
+                </div>
+              )}
               {flipped && <div className="quick-lesson-actions"><Button variant="secondary" onClick={() => rateCard(false)}>Ainda preciso revisar</Button><Button onClick={() => rateCard(true)}>Agora aprendi</Button></div>}
             </>;
           })()}
