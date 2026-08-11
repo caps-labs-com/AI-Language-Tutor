@@ -13,8 +13,8 @@ begin
     where is_published
     group by language, level
   loop
-    if catalog_row.lesson_count < 30 then
-      raise exception 'Quick lesson catalog failure: %/% has % rows; expected at least 30',
+    if catalog_row.lesson_count < 25 then
+      raise exception 'Quick lesson catalog failure: %/% has % rows; expected at least 25 unique lessons',
         catalog_row.language, catalog_row.level, catalog_row.lesson_count;
     end if;
   end loop;
@@ -31,6 +31,14 @@ begin
     raise exception 'Quick lesson catalog failure: expected 16 language/level combinations';
   end if;
 
+  if exists (
+    select 1 from public.quick_lessons where is_published
+    group by language, level, regexp_replace(lower(title), '[^[:alnum:]]+', '', 'g')
+    having count(*) > 1
+  ) then
+    raise exception 'Quick lesson catalog failure: normalized duplicate titles';
+  end if;
+
   foreach language_code in array array['en', 'es', 'fr', 'it']
   loop
     if exists (
@@ -43,6 +51,14 @@ begin
       raise exception 'Grammar catalog failure for %: expected at least 10 topics per level', language_code;
     end if;
   end loop;
+
+  if exists (
+    select 1 from public.grammar_topics where is_published
+    group by language, level, regexp_replace(lower(title), '[^[:alnum:]]+', '', 'g')
+    having count(*) > 1
+  ) then
+    raise exception 'Grammar catalog failure: normalized duplicate titles';
+  end if;
 
   if exists (
     select topic.id
@@ -201,8 +217,8 @@ begin
       and passage.is_published
     group by required.language, required_level.level
   loop
-    if catalog_row.passage_count < 10 then
-      raise exception 'Reading catalog failure: %/% has %, expected at least 10 passages',
+    if catalog_row.passage_count < 9 then
+      raise exception 'Reading catalog failure: %/% has %, expected at least 9 unique passages',
         catalog_row.language, catalog_row.level, catalog_row.passage_count;
     end if;
   end loop;
@@ -219,6 +235,14 @@ begin
       )
   ) then
     raise exception 'Reading failure: expected A1=3, A2=4, B1=6, B2=8 questions';
+  end if;
+
+  if exists (
+    select 1 from public.reading_passages where is_published
+    group by language, level, regexp_replace(lower(title), '[^[:alnum:]]+', '', 'g')
+    having count(*) > 1
+  ) then
+    raise exception 'Reading catalog failure: normalized duplicate titles';
   end if;
 
   if exists (

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import unicodedata
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -106,6 +107,44 @@ def candidate_text(content: dict[str, Any]) -> str:
         if key in content:
             chunks.append(json.dumps(content[key], ensure_ascii=False))
     return "\n".join(chunks)
+
+
+def normalized_title(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return "".join(
+        character.casefold()
+        for character in unicodedata.normalize("NFKC", value)
+        if character.isalnum()
+    )
+
+
+def reject_duplicate_titles(records: list[dict[str, Any]]) -> None:
+    """Keep the richest approved candidate for each language/level/title."""
+    groups: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
+    for row in records:
+        if row.get("status") != "approved":
+            continue
+        content = row.get("content") or {}
+        key = (
+            str(row.get("language")),
+            str(row.get("level")),
+            str(row.get("content_type")),
+            normalized_title(content.get("title")),
+        )
+        groups.setdefault(key, []).append(row)
+
+    for duplicates in groups.values():
+        if len(duplicates) < 2:
+            continue
+        keep = max(
+            duplicates, key=lambda row: len(candidate_text(row.get("content") or {}))
+        )
+        for row in duplicates:
+            if row is keep:
+                continue
+            row["status"] = "rejected"
+            row["validation"]["errors"].append("duplicate_title_in_batch")
 
 
 def validate(
@@ -336,6 +375,7 @@ def main() -> int:
         validate(row, curriculum, approved, source_text, args.similarity_limit)
         for row in load_jsonl(args.input)
     ]
+    reject_duplicate_titles(records)
     write_jsonl(args.output, records)
     counts = Counter(row["status"] for row in records)
     print(json.dumps({"total": len(records), **counts, "output": str(args.output)}))
