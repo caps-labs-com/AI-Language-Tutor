@@ -50,6 +50,41 @@ class ContentPipelineTests(unittest.TestCase):
         )
         self.assertTrue(any("not_distinct" in error for error in errors))
 
+    def test_advanced_content_requires_at_least_three_options(self) -> None:
+        errors: list[str] = []
+        validate_questions(
+            [
+                {
+                    "prompt": "P?",
+                    "options": ["a", "b"],
+                    "answer_index": 0,
+                    "explanation_pt_br": "E",
+                }
+            ],
+            1,
+            errors,
+            "exercises",
+            3,
+        )
+        self.assertIn("exercises[0]_options_invalid", errors)
+
+        accepted: list[str] = []
+        validate_questions(
+            [
+                {
+                    "prompt": "P?",
+                    "options": ["a", "b", "c"],
+                    "answer_index": 0,
+                    "explanation_pt_br": "E",
+                }
+            ],
+            1,
+            accepted,
+            "exercises",
+            3,
+        )
+        self.assertEqual(accepted, [])
+
     def test_similarity_detects_copy(self) -> None:
         text = "one two three four five six seven eight nine ten"
         self.assertGreater(ngram_containment(text, text), 0.99)
@@ -99,6 +134,27 @@ class ContentPipelineTests(unittest.TestCase):
         )
         self.assertEqual(content, reading)
 
+    def test_canonicalizer_removes_duplicate_options_and_maps_answer(self) -> None:
+        from content_pipeline_common import canonicalize_content
+
+        content = canonicalize_content(
+            "reading",
+            {
+                "title": "Texte",
+                "body": "Corps",
+                "questions": [
+                    {
+                        "prompt": "Question ?",
+                        "options": ["Non", "Oui !", "oui"],
+                        "answer_index": 2,
+                        "explanation_pt_br": "Explicação",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(content["questions"][0]["options"], ["Non", "Oui !"])
+        self.assertEqual(content["questions"][0]["answer_index"], 1)
+
     def test_repair_completeness_prefers_populated_reading(self) -> None:
         from content_pipeline_common import content_completeness_score
 
@@ -129,6 +185,39 @@ class ContentPipelineTests(unittest.TestCase):
             "common": {"levels": {"A2": {"content_limits": {}}}}
         }
         self.assertIn("grammar fields", repair_prompt(candidate, curriculum))
+
+    def test_reading_repair_prompt_includes_measured_size(self) -> None:
+        from repair_learning_candidates import repair_prompt
+
+        candidate = {
+            "language": "it",
+            "level": "B1",
+            "content_type": "reading",
+            "curriculum_concept_ids": ["it.b1.example"],
+            "validation": {
+                "errors": ["reading_word_count_outside_curriculum"],
+                "warnings": [],
+            },
+            "content": {
+                "title": "Esempio",
+                "body": "Una frase breve.",
+                "questions": [],
+            },
+        }
+        curriculum = {
+            "common": {
+                "levels": {
+                    "B1": {
+                        "content_limits": {
+                            "reading_words_min": 400,
+                            "reading_words_max": 700,
+                        }
+                    }
+                }
+            }
+        }
+        prompt = repair_prompt(candidate, curriculum)
+        self.assertIn('"body_word_count": 3', prompt)
 
     def test_model_json_parser_accepts_markdown_fence(self) -> None:
         self.assertEqual(parse_model_json('```json\n{"ok": true}\n```'), {"ok": True})

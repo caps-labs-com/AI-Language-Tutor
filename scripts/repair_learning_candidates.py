@@ -15,6 +15,8 @@ from content_pipeline_common import (
     load_curriculum,
     load_jsonl,
     now_iso,
+    paragraphs,
+    words,
     write_jsonl,
 )
 from generate_learning_candidates import call_model
@@ -26,6 +28,12 @@ def repair_prompt(candidate: dict[str, Any], curriculum: dict[str, Any]) -> str:
     content_type = candidate["content_type"]
     validation = candidate["validation"]
     limits = curriculum["common"]["levels"][level]["content_limits"]
+    body = str(candidate.get("content", {}).get("body", ""))
+    measured_content = {
+        "body_word_count": len(words(body)),
+        "body_paragraph_count": len(paragraphs(body)),
+        "question_count": len(candidate.get("content", {}).get("questions", [])),
+    }
     question_counts = {
         "reading": {"A1": 3, "A2": 4, "B1": 6, "B2": 8},
         "quick_lesson": {"A1": 2, "A2": 3, "B1": 4, "B2": 5},
@@ -61,7 +69,10 @@ Immutable requirements:
 - content type: {content_type}
 - curriculum concepts: {json.dumps(candidate["curriculum_concept_ids"])}
 - content limits: {json.dumps(limits)}
+- measured candidate content: {json.dumps(measured_content)}
 - preserve the pedagogical subject, but rewrite any field necessary to fix every error
+- when the word count is below the minimum, add substantive target-language detail until it is safely inside the range; do not merely rephrase or add filler
+- when paragraph count is outside the range, split or merge paragraphs without deleting required meaning
 - never copy eight consecutive words from an external source
 - output schema: {type_contract}
 

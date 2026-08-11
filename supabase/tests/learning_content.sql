@@ -114,10 +114,10 @@ begin
     where is_published
       and (
         (level in ('A1', 'A2') and jsonb_array_length(options) not between 2 and 6)
-        or (level in ('B1', 'B2') and jsonb_array_length(options) <> 4)
+        or (level in ('B1', 'B2') and jsonb_array_length(options) not between 3 and 6)
       )
   ) then
-    raise exception 'Grammar catalog failure: A1/A2 need 2-6 options and B1/B2 need 4 options';
+    raise exception 'Grammar catalog failure: A1/A2 need 2-6 options and B1/B2 need 3-6 options';
   end if;
 
   if exists (
@@ -165,7 +165,7 @@ begin
     where lesson.is_published
       and lesson.level in ('B1', 'B2')
       and (
-        jsonb_array_length(question.value -> 'options') <> 4
+        jsonb_array_length(question.value -> 'options') not between 3 and 6
         or question.value ->> 'prompt' in (
           'What helped Maya reach the goal?',
           'What helped Leo reach the goal?',
@@ -174,7 +174,7 @@ begin
         )
       )
   ) then
-    raise exception 'Quick lesson failure: B1/B2 questions must keep 4 options and avoid generic stems';
+    raise exception 'Quick lesson failure: B1/B2 questions need 3-6 options and must avoid generic stems';
   end if;
 
   if not exists (
@@ -245,9 +245,9 @@ begin
     cross join lateral jsonb_array_elements(passage.questions) as question(value)
     where passage.is_published
       and passage.level in ('B1', 'B2')
-      and jsonb_array_length(question.value -> 'options') <> 4
+      and jsonb_array_length(question.value -> 'options') not between 3 and 6
   ) then
-    raise exception 'Reading failure: B1/B2 questions need 4 options';
+    raise exception 'Reading failure: B1/B2 questions need 3-6 options';
   end if;
 
   if not exists (

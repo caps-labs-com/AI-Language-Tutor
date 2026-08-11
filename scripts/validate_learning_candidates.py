@@ -34,7 +34,12 @@ def add_length(
 
 
 def validate_questions(
-    value: Any, expected: int, errors: list[str], prefix: str = "questions"
+    value: Any,
+    expected: int,
+    errors: list[str],
+    prefix: str = "questions",
+    minimum_options: int = 2,
+    maximum_options: int = 6,
 ) -> None:
     if not isinstance(value, list) or len(value) != expected:
         errors.append(f"{prefix}_must_have_exactly_{expected}_items")
@@ -51,11 +56,12 @@ def validate_questions(
             or not question["prompt"].strip()
         ):
             errors.append(f"{key}_prompt_required")
-        if (
+        options_invalid = (
             not isinstance(options, list)
-            or not 2 <= len(options) <= 6
+            or not minimum_options <= len(options) <= maximum_options
             or any(not isinstance(item, str) or not item.strip() for item in options)
-        ):
+        )
+        if options_invalid:
             errors.append(f"{key}_options_invalid")
         elif len({normalized_text(item) for item in options}) != len(options):
             errors.append(f"{key}_options_not_distinct")
@@ -177,7 +183,12 @@ def validate(
         count = (
             READING_QUESTION_COUNTS if kind == "reading" else QUICK_QUESTION_COUNTS
         )[level]
-        validate_questions(content.get("questions"), count, errors)
+        validate_questions(
+            content.get("questions"),
+            count,
+            errors,
+            minimum_options=3 if level in {"B1", "B2"} else 2,
+        )
         if isinstance(content.get("questions"), list):
             body_normalized = normalized_text(str(content.get("body", "")))
             for index, question in enumerate(content["questions"]):
@@ -247,6 +258,7 @@ def validate(
                 5,
                 errors,
                 "exercises",
+                3 if level in {"B1", "B2"} else 2,
             )
             for index, item in enumerate(exercises):
                 if isinstance(item, dict):

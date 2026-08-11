@@ -271,6 +271,9 @@ def canonicalize_content(content_type: str, value: dict[str, Any]) -> dict[str, 
             content = dict(content[key])
             break
 
+    if content_type in {"reading", "quick_lesson"}:
+        content["questions"] = _deduplicate_question_options(content.get("questions"))
+        return content
     if content_type != "grammar":
         return content
     for key in ("use_cases", "common_mistakes", "notes_pt_br"):
@@ -303,9 +306,43 @@ def canonicalize_content(content_type: str, value: dict[str, Any]) -> dict[str, 
                 and 0 <= answer < len(options)
             ):
                 exercise["example"] = question.replace("___", str(options[answer]))
-        normalized.append(exercise)
+        normalized.append(_deduplicate_options(exercise))
     content["exercises"] = normalized
     return content
+
+
+def _deduplicate_question_options(value: Any) -> Any:
+    if not isinstance(value, list):
+        return value
+    return [
+        _deduplicate_options(item) if isinstance(item, dict) else item for item in value
+    ]
+
+
+def _deduplicate_options(question: dict[str, Any]) -> dict[str, Any]:
+    """Remove normalized duplicate options while preserving the correct answer."""
+    options = question.get("options")
+    answer = question.get("answer_index")
+    if not isinstance(options, list) or not isinstance(answer, int):
+        return question
+    if not 0 <= answer < len(options) or any(not isinstance(item, str) for item in options):
+        return question
+
+    unique: list[str] = []
+    index_by_value: dict[str, int] = {}
+    old_to_new: list[int] = []
+    for option in options:
+        key = normalized_text(option)
+        if not key or key not in index_by_value:
+            index_by_value[key] = len(unique)
+            unique.append(option)
+        old_to_new.append(index_by_value[key])
+    if len(unique) == len(options):
+        return question
+    normalized = dict(question)
+    normalized["options"] = unique
+    normalized["answer_index"] = old_to_new[answer]
+    return normalized
 
 
 def content_completeness_score(content_type: str, value: dict[str, Any]) -> int:

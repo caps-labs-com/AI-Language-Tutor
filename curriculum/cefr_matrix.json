@@ -135,7 +135,7 @@
           "reading_words_min": 400,
           "reading_words_max": 700,
           "paragraphs_min": 5,
-          "paragraphs_max": 7,
+          "paragraphs_max": 8,
           "questions_min": 5,
           "questions_max": 6,
           "writing_words_min": 140,
