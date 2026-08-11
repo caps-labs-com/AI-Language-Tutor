@@ -162,6 +162,34 @@ async def test_send_message_persists_the_exchange() -> None:
 
 
 @pytest.mark.asyncio
+async def test_translate_tutor_message() -> None:
+    async with ConversationHarness() as harness:
+        harness.conversations.context.return_value = conversation_context()
+
+        response = await harness.client.post(
+            f"/api/v1/conversations/{SESSION_ID}/translations",
+            json={"message_sequence": 1, "request_id": str(uuid4())},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["translation_pt_br"] == "Boa tarde! O que posso trazer para você?"
+    assert response.json()["usage"]["provider"] == "mock"
+
+
+@pytest.mark.asyncio
+async def test_translate_rejects_message_outside_session() -> None:
+    async with ConversationHarness() as harness:
+        harness.conversations.context.return_value = conversation_context()
+
+        response = await harness.client.post(
+            f"/api/v1/conversations/{SESSION_ID}/translations",
+            json={"message_sequence": 999, "request_id": str(uuid4())},
+        )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_retry_replays_cached_generation_without_calling_provider() -> None:
     cached = CachedGeneration(
         result=TutorReply(reply="Recovered reply"),

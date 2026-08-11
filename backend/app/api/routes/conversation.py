@@ -195,7 +195,7 @@ async def translate_conversation_message(
             detail="A mensagem do tutor não foi encontrada nesta conversa.",
         )
 
-    task = LLMTask.TUTOR_REPLY
+    task = LLMTask.TRANSLATION
     primary = gateway.primary_provider(task, context.plan_id)
     try:
         await budget.reserve(

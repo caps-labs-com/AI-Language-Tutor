@@ -268,3 +268,17 @@ test("cenário recomendado respeita a faixa do nível do aluno", () => {
   assert.equal(recommendScenario(scenarios, "A2")?.id, "basic");
   assert.equal(recommendScenario(scenarios, "B2")?.id, "advanced");
 });
+
+test("cenário recomendado respeita objetivo e categorias escolhidas no onboarding", () => {
+  const scenarios = [
+    { id: "daily", category: "daily", minLevel: "A2", maxLevel: "A2" },
+    { id: "travel", category: "travel", minLevel: "A2", maxLevel: "A2" },
+  ] as Parameters<typeof recommendScenario>[0];
+
+  const recommended = recommendScenario(scenarios, "A2", {
+    learningGoal: "travel",
+    desiredScenarios: ["travel"],
+  });
+
+  assert.equal(recommended?.id, "travel");
+});

@@ -10,6 +10,7 @@ class LLMTask(StrEnum):
 
     TUTOR_REPLY = "tutor_reply"
     SESSION_SUMMARY = "session_summary"
+    TRANSLATION = "translation"
 
 
 class TargetLanguage(StrEnum):

@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     llm_session_summary_temperature: float = 0.2
     # O resumo lê a conversa inteira, então custa mais que uma resposta isolada.
     llm_session_summary_max_cost_usd: float = 0.04
+    llm_translation_providers: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    llm_translation_max_output_tokens: int = 600
+    llm_translation_max_cost_usd: float = 0.005
     llm_speech_transcription_max_cost_usd: float = 0.01
     speech_max_audio_bytes: int = 500_000
 
@@ -101,6 +104,7 @@ class Settings(BaseSettings):
         "llm_tutor_reply_providers",
         "llm_premium_tutor_reply_providers",
         "llm_session_summary_providers",
+        "llm_translation_providers",
         mode="before",
     )
     @classmethod

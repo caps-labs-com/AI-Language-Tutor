@@ -48,6 +48,7 @@ Choose the primary provider and ordered fallbacks through environment variables:
 LLM_PRIMARY_PROVIDER=gemini
 LLM_FALLBACK_PROVIDERS=deepseek
 LLM_PREMIUM_TUTOR_REPLY_PROVIDERS=deepseek,gemini
+LLM_TRANSLATION_PROVIDERS=gemini,deepseek
 ```
 
 Supported adapter names are `mock`, `deepseek`, `kimi`, and `gemini`. Real

@@ -72,6 +72,10 @@ class ConversationContext:
     previously_corrected: tuple[str, ...]
     messages: tuple[ConversationMessageView, ...]
     correction_preference: str = "immediate"
+    learning_goal: str = "conversation"
+    study_minutes_per_day: int = 20
+    interests: tuple[str, ...] = ()
+    desired_scenarios: tuple[str, ...] = ()
     plan_id: str = "free"
     character_role_pt_br: str = "Interlocutor do cenário"
     character_personality_pt_br: str = "Atencioso, natural e colaborativo"
@@ -110,6 +114,10 @@ class ConversationContext:
             previously_corrected=self.previously_corrected,
             planned_minutes=self.planned_minutes,
             correction_preference=self.correction_preference,
+            learning_goal=self.learning_goal,
+            study_minutes_per_day=self.study_minutes_per_day,
+            interests=self.interests,
+            desired_scenarios=self.desired_scenarios,
             plan_id=self.plan_id,
             character_role_pt_br=self.character_role_pt_br,
             character_personality_pt_br=self.character_personality_pt_br,
@@ -211,7 +219,10 @@ class ConversationService:
             "/learner_preferences",
             params={
                 "user_id": f"eq.{user_id}",
-                "select": "correction_preference",
+                "select": (
+                    "correction_preference,learning_goal,study_minutes_per_day,"
+                    "interests,desired_scenarios"
+                ),
                 "limit": "1",
             },
         )
@@ -248,6 +259,7 @@ class ConversationService:
             if preference_rows
             else "immediate"
         )
+        preference = preference_rows[0] if preference_rows else {}
         return ConversationContext(
             status=result["status"],
             scenario_id=result["scenario_id"],
@@ -262,6 +274,10 @@ class ConversationService:
             correction_count=int(result["correction_count"]),
             max_learner_messages=int(result["max_learner_messages"]),
             correction_preference=correction_preference,
+            learning_goal=str(preference.get("learning_goal") or "conversation"),
+            study_minutes_per_day=int(preference.get("study_minutes_per_day") or 20),
+            interests=tuple(preference.get("interests") or ()),
+            desired_scenarios=tuple(preference.get("desired_scenarios") or ()),
             plan_id=str(entitlements.get("plan_id") or "free"),
             character_role_pt_br=str(
                 scenario.get("character_role_pt_br") or "Interlocutor do cenário"

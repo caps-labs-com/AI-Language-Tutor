@@ -138,6 +138,10 @@ class ConversationPromptContext:
     previously_corrected: tuple[str, ...] = ()
     planned_minutes: int = 10
     correction_preference: str = "immediate"
+    learning_goal: str = "conversation"
+    study_minutes_per_day: int = 20
+    interests: tuple[str, ...] = ()
+    desired_scenarios: tuple[str, ...] = ()
     plan_id: str = "free"
     character_role_pt_br: str = "Interlocutor do cenário"
     character_personality_pt_br: str = "Atencioso, natural e colaborativo"
@@ -256,10 +260,19 @@ def build_tutor_prompt(context: ConversationPromptContext, learner_message: str)
         else "- Follow the CEFR-specific behavior below."
     )
     next_turn = context.learner_message_count + 1
+    interests = ", ".join(context.interests) if context.interests else "not specified"
+    desired_scenarios = (
+        ", ".join(context.desired_scenarios) if context.desired_scenarios else "not specified"
+    )
     return (
         f"Target language: {LANGUAGE_NAMES[context.target_language]} "
         f"({context.target_language.value})\n"
         f"Learner CEFR level: {context.learner_level.value}\n"
+        "Learner preferences (use subtly; never list them back or invent personal facts):\n"
+        f"- Main goal: {context.learning_goal}\n"
+        f"- Preferred daily study time: {context.study_minutes_per_day} minutes\n"
+        f"- Interests: {interests}\n"
+        f"- Desired scenario categories: {desired_scenarios}\n"
         f"Scenario: {context.scenario_id}\n"
         f"Scenario objective (Portuguese): {context.objective_pt_br}\n"
         f"Scenario checklist (Portuguese):\n{goals}\n"

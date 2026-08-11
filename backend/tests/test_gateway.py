@@ -84,6 +84,12 @@ def build_gateway(
                 temperature=0.2,
                 max_cost_usd=0.04,
             ),
+            LLMTask.TRANSLATION: TaskProfile(
+                providers=names,
+                max_output_tokens=600,
+                temperature=0,
+                max_cost_usd=0.005,
+            ),
         },
         max_retries=max_retries,
         failure_threshold=failure_threshold,

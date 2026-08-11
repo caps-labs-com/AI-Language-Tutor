@@ -83,6 +83,12 @@ def build_task_profiles(settings: Settings) -> dict[LLMTask, TaskProfile]:
             temperature=settings.llm_session_summary_temperature,
             max_cost_usd=settings.llm_session_summary_max_cost_usd,
         ),
+        LLMTask.TRANSLATION: TaskProfile(
+            providers=chain(settings.llm_translation_providers),
+            max_output_tokens=settings.llm_translation_max_output_tokens,
+            temperature=0,
+            max_cost_usd=settings.llm_translation_max_cost_usd,
+        ),
     }
 
 

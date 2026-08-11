@@ -6,6 +6,7 @@ from app.services.providers.base import CompletionRequest, CompletionResult, LLM
 
 _TARGET_LANGUAGE = re.compile(r"^Target language: .*\((\w{2})\)", re.MULTILINE)
 _LAST_LEARNER_MESSAGE = re.compile(r"<learner_message>(.*?)</learner_message>", re.DOTALL)
+_TRANSLATION_MESSAGE = re.compile(r"<message>(.*?)</message>", re.DOTALL)
 
 _REPLY_BY_LANGUAGE = {
     "en": "Great start! What would you like to say next?",
@@ -47,6 +48,17 @@ class MockProvider(LLMProvider):
     async def complete(self, request: CompletionRequest) -> CompletionResult:
         if request.task is LLMTask.SESSION_SUMMARY:
             content = self._summary_content()
+        elif request.task is LLMTask.TRANSLATION:
+            source = _TRANSLATION_MESSAGE.search(request.user_prompt)
+            original = source.group(1).strip() if source else ""
+            translations = {
+                "Good afternoon! What can I get for you?": (
+                    "Boa tarde! O que posso trazer para você?"
+                ),
+            }
+            content = json.dumps(
+                {"translation_pt_br": translations.get(original, f"Tradução: {original}")}
+            )
         else:
             content = self._tutor_content(request.user_prompt)
         input_tokens = max(1, (len(request.system_prompt) + len(request.user_prompt)) // 4)

@@ -417,16 +417,38 @@ const levelOrder = ["A1", "A2", "B1", "B2"];
 export function recommendScenario(
   scenarios: ScenarioCatalogItem[],
   learnerLevel: string,
+  preferences?: {
+    learningGoal?: "travel" | "career" | "conversation" | "exam";
+    desiredScenarios?: string[];
+  },
 ): ScenarioCatalogItem | null {
   if (!scenarios.length) return null;
   const index = levelOrder.indexOf(learnerLevel === "C1" ? "B2" : learnerLevel);
   if (index < 0) return scenarios[0];
-  const match = scenarios.find(
+  const eligible = scenarios.filter(
     (scenario) =>
       levelOrder.indexOf(scenario.minLevel) <= index &&
       index <= levelOrder.indexOf(scenario.maxLevel),
   );
-  return match || scenarios[0];
+  if (!eligible.length) return scenarios[0];
+
+  const goalCategory = {
+    travel: "travel",
+    career: "professional",
+    conversation: "daily",
+    exam: "professional",
+  }[preferences?.learningGoal || "conversation"];
+  const desired = new Set(preferences?.desiredScenarios || []);
+  return eligible
+    .map((scenario, catalogIndex) => ({
+      scenario,
+      catalogIndex,
+      score: (desired.has(scenario.category) ? 4 : 0)
+        + (scenario.category === goalCategory ? 2 : 0)
+        + (scenario.minLevel === learnerLevel && scenario.maxLevel === learnerLevel ? 1 : 0),
+    }))
+    .sort((left, right) => right.score - left.score || left.catalogIndex - right.catalogIndex)[0]
+    .scenario;
 }
 
 /** Formata segundos como mm:ss, o formato que o cronômetro da conversa exibe. */

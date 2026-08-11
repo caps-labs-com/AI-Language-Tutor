@@ -649,7 +649,7 @@ function Onboarding({
 function Dashboard({ go, displayName, preferences, session, scenarios, startScenario }: { go: (id: ScreenId) => void; displayName: string; preferences: LearnerPreferences | null; session: Session | null; scenarios: ScenarioCatalogItem[]; startScenario: (scenario: ScenarioCatalogItem) => void }) {
   const level = shortLevel(preferences?.currentLevel || "unknown");
   const language = preferences ? languageDetails[preferences.targetLanguage].name : "Inglês";
-  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown");
+  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown", preferences || undefined);
   const [metrics, setMetrics] = useState(() => calculateDashboardMetrics([], preferences?.studyDaysPerWeek || 5));
   const [metricsLoading, setMetricsLoading] = useState(true);
 
@@ -743,7 +743,7 @@ const weekdayNames = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
 function Plan({ go, displayName, preferences, session, scenarios, startScenario }: { go: (id: ScreenId) => void; displayName: string; preferences: LearnerPreferences | null; session: Session | null; scenarios: ScenarioCatalogItem[]; startScenario: (scenario: ScenarioCatalogItem) => void }) {
   const [metrics, setMetrics] = useState(() => calculateDashboardMetrics([], preferences?.studyDaysPerWeek || 5));
   const [loading, setLoading] = useState(Boolean(session));
-  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown");
+  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown", preferences || undefined);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -833,7 +833,7 @@ function Scenarios({
     (category === "all" || scenario.category === category)
     && `${scenario.title} ${scenario.description}`.toLocaleLowerCase("pt-BR").includes(normalized)
   );
-  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown");
+  const recommended = recommendScenario(scenarios, preferences?.currentLevel || "unknown", preferences || undefined);
 
   if (catalogError) {
     return (
@@ -2722,7 +2722,7 @@ export default function ProductPrototype() {
 
   const selectedScenario =
     scenarios.find(({ id }) => id === selectedScenarioId)
-    || recommendScenario(scenarios, preferences?.currentLevel || "unknown");
+    || recommendScenario(scenarios, preferences?.currentLevel || "unknown", preferences || undefined);
 
   const content = (() => {
     if (authLoading || Boolean(session && planResolvedUserId !== session.user.id)) {
