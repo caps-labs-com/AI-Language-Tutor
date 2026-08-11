@@ -30,6 +30,7 @@ import {
   sessionProgressPercent,
   startConversation,
   transcribeAudio,
+  translateConversationMessage,
   type ConversationMessage,
   type ConversationSession,
   type ScenarioCatalogItem,
@@ -104,6 +105,9 @@ export function Conversation({
   const [savingVoiceConsent, setSavingVoiceConsent] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const [translations, setTranslations] = useState<Record<number, string>>({});
+  const [translatingSequence, setTranslatingSequence] = useState<number | null>(null);
+  const [translationError, setTranslationError] = useState("");
   const [continuedAfterGoal, setContinuedAfterGoal] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const generationRequestRef = useRef<string | null>(null);
@@ -458,6 +462,41 @@ export function Conversation({
     goBack();
   };
 
+  const translateLatestTutorMessage = async () => {
+    if (!conversation || !accessToken || translatingSequence !== null) return;
+    const latestTutorMessage = [...messages].reverse().find(({ role }) => role === "tutor");
+    if (!latestTutorMessage) return;
+    if (translations[latestTutorMessage.sequence]) {
+      setTranslations((current) => {
+        const next = { ...current };
+        delete next[latestTutorMessage.sequence];
+        return next;
+      });
+      return;
+    }
+    setTranslatingSequence(latestTutorMessage.sequence);
+    setTranslationError("");
+    try {
+      const result = await translateConversationMessage(
+        accessToken,
+        conversation.session_id,
+        latestTutorMessage.sequence,
+      );
+      setTranslations((current) => ({
+        ...current,
+        [result.message_sequence]: result.translation_pt_br,
+      }));
+    } catch (error) {
+      setTranslationError(
+        error instanceof ConversationApiError
+          ? error.message
+          : "Não foi possível traduzir esta mensagem agora.",
+      );
+    } finally {
+      setTranslatingSequence(null);
+    }
+  };
+
   if (startupError) {
     const dailyLimitHit = startupError.includes("limite diário de conversas");
     const showUpgrade = planId !== "premium" && Boolean(onUpgrade);
@@ -596,6 +635,11 @@ export function Conversation({
                 {message.role === "tutor" && <div className="mini-avatar">Lu</div>}
                 <div>
                   <span lang={targetLanguage}>{message.content}</span>
+                  {message.role === "tutor" && translations[message.sequence] && (
+                    <small className="message-translation" lang="pt-BR">
+                      {translations[message.sequence]}
+                    </small>
+                  )}
                   {message.role === "tutor" && isPremiumPlan(planId) && (
                     <SpeechPlayback
                       text={message.content}
@@ -693,10 +737,14 @@ export function Conversation({
                 </button>
                 <button
                   type="button"
-                  disabled
-                  aria-label="Traduzir pergunta (disponível em uma etapa futura)"
+                  onClick={() => void translateLatestTutorMessage()}
+                  disabled={translatingSequence !== null}
+                  aria-label="Traduzir a última mensagem do tutor"
                 >
-                  <Languages size={15} aria-hidden="true" focusable="false" /> Traduzir pergunta
+                  {translatingSequence !== null
+                    ? <LoaderCircle className="spin" size={15} aria-hidden="true" />
+                    : <Languages size={15} aria-hidden="true" focusable="false" />}
+                  {translatingSequence !== null ? "Traduzindo..." : "Mostrar tradução"}
                 </button>
                 {sending && (
                   <button type="button" className="cancel-generation" onClick={cancelGeneration}>
@@ -704,6 +752,9 @@ export function Conversation({
                   </button>
                 )}
               </div>
+              {translationError && (
+                <div className="form-message form-error" role="alert">{translationError}</div>
+              )}
               {showHint && (
                 <div className="conversation-hint" role="status">
                   <div>

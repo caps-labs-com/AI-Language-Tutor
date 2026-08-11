@@ -237,6 +237,20 @@ export function sendConversationMessage(
   });
 }
 
+export function translateConversationMessage(
+  accessToken: string,
+  sessionId: string,
+  messageSequence: number,
+) {
+  return request<{ message_sequence: number; translation_pt_br: string }>(
+    `/api/v1/conversations/${sessionId}/translations`,
+    {
+      accessToken,
+      body: { message_sequence: messageSequence, request_id: crypto.randomUUID() },
+    },
+  );
+}
+
 export function completeConversation(accessToken: string, sessionId: string) {
   return request<CompletedConversation>(`/api/v1/conversations/${sessionId}/complete`, {
     accessToken,

@@ -19,6 +19,7 @@ from app.services.providers.common import (
     TUTOR_SYSTEM_PROMPT,
     ConversationPromptContext,
     build_tutor_prompt,
+    discard_punctuation_only_correction,
 )
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
@@ -106,7 +107,7 @@ async def tutor_reply(
     )
     return TutorReplyResponse(
         request_id=payload.request_id,
-        result=generated.result,
+        result=discard_punctuation_only_correction(generated.result),
         usage=UsageSummary(
             provider=generated.provider,
             model=generated.model,

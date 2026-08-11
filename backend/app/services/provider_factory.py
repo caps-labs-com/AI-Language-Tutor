@@ -24,6 +24,7 @@ def build_provider(name: str, settings: Settings) -> LLMProvider:
             timeout_seconds=settings.llm_request_timeout_seconds,
             input_usd_per_million=settings.deepseek_input_usd_per_million,
             output_usd_per_million=settings.deepseek_output_usd_per_million,
+            extra_body={"thinking": {"type": "disabled"}},
         )
     if name == "kimi":
         _validate_pricing(
@@ -89,7 +90,12 @@ def build_gateway(settings: Settings) -> LLMGateway:
     task_profiles = build_task_profiles(settings)
     # Uma instância por provedor é compartilhada entre as tarefas para não abrir
     # múltiplos pools HTTP contra o mesmo endpoint.
-    names = dict.fromkeys(name for profile in task_profiles.values() for name in profile.providers)
+    names = dict.fromkeys(
+        [
+            *(name for profile in task_profiles.values() for name in profile.providers),
+            *settings.llm_premium_tutor_reply_providers,
+        ]
+    )
     providers = {name: build_provider(name, settings) for name in names}
     return LLMGateway(
         providers,
@@ -97,4 +103,5 @@ def build_gateway(settings: Settings) -> LLMGateway:
         max_retries=settings.llm_max_retries,
         failure_threshold=settings.llm_circuit_failure_threshold,
         recovery_seconds=settings.llm_circuit_recovery_seconds,
+        premium_tutor_providers=tuple(settings.llm_premium_tutor_reply_providers),
     )

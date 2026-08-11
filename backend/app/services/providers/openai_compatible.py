@@ -17,12 +17,14 @@ class OpenAICompatibleProvider(LLMProvider):
         timeout_seconds: float,
         input_usd_per_million: float,
         output_usd_per_million: float,
+        extra_body: dict[str, Any] | None = None,
     ) -> None:
         self.name = name
         self.model = model
         self.api_key = api_key
         self.input_usd_per_million = input_usd_per_million
         self.output_usd_per_million = output_usd_per_million
+        self.extra_body = extra_body or {}
         self.client = httpx.AsyncClient(
             base_url=base_url,
             timeout=timeout_seconds,
@@ -43,6 +45,7 @@ class OpenAICompatibleProvider(LLMProvider):
                     {"role": "system", "content": request.system_prompt},
                     {"role": "user", "content": request.user_prompt},
                 ],
+                **self.extra_body,
             },
         )
         response.raise_for_status()

@@ -84,6 +84,60 @@ set local role service_role;
 
 do $$
 declare
+  level_code text;
+begin
+  foreach level_code in array array['A1', 'A2', 'B1', 'B2'] loop
+    if (
+      select count(*)
+      from public.conversation_scenarios
+      where is_published and min_level = level_code and max_level = level_code
+    ) < 6 then
+      raise exception 'Conversation catalog failure: % needs at least 6 level-specific scenarios', level_code;
+    end if;
+  end loop;
+
+  if exists (
+    select 1
+    from public.conversation_scenarios
+    where is_published
+      and (
+        nullif(btrim(character_role_pt_br), '') is null
+        or nullif(btrim(character_personality_pt_br), '') is null
+        or nullif(btrim(situation_pt_br), '') is null
+        or jsonb_array_length(conversation_beats_pt_br) < 2
+      )
+  ) then
+    raise exception 'Conversation catalog failure: published scenarios need complete persona metadata';
+  end if;
+
+  if exists (
+    select 1
+    from public.conversation_scenarios
+    where is_published
+      and (char_length(cefr_rationale_pt_br) < 20
+        or jsonb_typeof(complexity_controls_pt_br) <> 'array'
+        or jsonb_array_length(complexity_controls_pt_br) = 0)
+  ) then
+    raise exception 'Conversation catalog failure: published scenarios need CEFR rationale and controls';
+  end if;
+
+  if exists (
+    select 1 from public.conversation_scenarios
+    where id in ('coffee', 'restaurant') and (min_level <> 'A1' or max_level <> 'A2')
+  ) or exists (
+    select 1 from public.conversation_scenarios
+    where id = 'airport' and (min_level <> 'A2' or max_level <> 'B1')
+  ) or exists (
+    select 1 from public.conversation_scenarios
+    where id = 'free' and (min_level <> 'A2' or max_level <> 'B2')
+  ) then
+    raise exception 'Conversation catalog failure: broad scenarios are not CEFR aligned';
+  end if;
+end;
+$$;
+
+do $$
+declare
   first_start jsonb;
   resumed_start jsonb;
   active_session_id uuid;
@@ -312,7 +366,7 @@ begin
 
   active_session_id := (
     public.start_conversation_session(
-      '30000000-0000-0000-0000-000000000002', 'coffee', 'es', 'B1'
+      '30000000-0000-0000-0000-000000000002', 'airport', 'es', 'B1'
     ) ->> 'session_id'
   )::uuid;
 
@@ -374,7 +428,7 @@ begin
   if (select count(*) from public.conversation_messages) < 3 then
     raise exception 'RLS failure: owner cannot read their own messages';
   end if;
-  if (select count(*) from public.conversation_scenarios) <> 14 then
+  if (select count(*) from public.conversation_scenarios) <> 30 then
     raise exception 'RLS failure: published scenarios are not readable';
   end if;
 end;

@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.llm import (
+    Correction,
     CorrectionSeverity,
     LLMTask,
     SessionSummary,
@@ -13,11 +14,59 @@ from app.services.providers.common import (
     SUMMARY_SYSTEM_PROMPT,
     TUTOR_SYSTEM_PROMPT,
     build_summary_prompt,
+    build_tutor_prompt,
     calculate_cost,
+    discard_punctuation_only_correction,
     parse_json_object,
 )
 from app.services.providers.mock import MockProvider
 from tests.support import prompt_context, tutor_prompt
+
+
+def test_punctuation_only_correction_is_discarded() -> None:
+    result = TutorReply(
+        reply="Buongiorno!",
+        correction=Correction(
+            original="Buongiorno",
+            corrected="Buongiorno!",
+            explanation_pt_br="Faltou pontuação.",
+            severity=CorrectionSeverity.MINOR,
+        ),
+        should_retry=True,
+    )
+
+    filtered = discard_punctuation_only_correction(result)
+
+    assert filtered.correction is None
+    assert filtered.should_retry is False
+
+
+def test_correction_with_word_change_is_preserved() -> None:
+    result = TutorReply(
+        reply="I went yesterday.",
+        correction=Correction(
+            original="I goed yesterday",
+            corrected="I went yesterday.",
+            explanation_pt_br="O passado de go é went.",
+            severity=CorrectionSeverity.IMPORTANT,
+        ),
+    )
+
+    assert discard_punctuation_only_correction(result).correction == result.correction
+
+
+def test_meaningful_apostrophe_correction_is_preserved() -> None:
+    result = TutorReply(
+        reply="I can't go.",
+        correction=Correction(
+            original="I cant go",
+            corrected="I can't go.",
+            explanation_pt_br="A contração precisa de apóstrofo.",
+            severity=CorrectionSeverity.IMPORTANT,
+        ),
+    )
+
+    assert discard_punctuation_only_correction(result).correction == result.correction
 
 
 def parse_tutor_reply(raw: str) -> TutorReply:
@@ -81,6 +130,19 @@ def test_tutor_system_prompt_states_the_agreed_tutor_behaviour() -> None:
     assert "explanation_pt_br` is always written in Brazilian Portuguese" in TUTOR_SYSTEM_PROMPT
     assert "Refuse sexual, violent, hateful" in TUTOR_SYSTEM_PROMPT
     assert "If you are unsure" in TUTOR_SYSTEM_PROMPT
+    assert "behave as the scenario character" in TUTOR_SYSTEM_PROMPT
+    assert "Do not end the interaction" in TUTOR_SYSTEM_PROMPT
+
+
+def test_tutor_prompt_contains_persona_progression_and_cefr_guidance() -> None:
+    context = prompt_context()
+    prompt = build_tutor_prompt(context, "I would like a coffee")
+
+    assert "Character role:" in prompt
+    assert "Conversation beats" in prompt
+    assert "Possible complications" in prompt
+    assert "A2 profile:" in prompt
+    assert "Learner turn number:" in prompt
 
 
 def test_summary_prompt_forbids_invented_content() -> None:

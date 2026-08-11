@@ -58,6 +58,7 @@ class LLMGateway:
         max_retries: int,
         failure_threshold: int,
         recovery_seconds: int,
+        premium_tutor_providers: tuple[str, ...] = (),
     ) -> None:
         if not providers:
             raise ValueError("At least one LLM provider is required")
@@ -72,6 +73,10 @@ class LLMGateway:
         self.max_retries = max_retries
         self.failure_threshold = failure_threshold
         self.recovery_seconds = recovery_seconds
+        unknown_premium = [name for name in premium_tutor_providers if name not in self.providers]
+        if unknown_premium:
+            raise ValueError(f"Premium tutor references unknown providers: {unknown_premium}")
+        self.premium_tutor_providers = premium_tutor_providers
         self.circuits = {name: CircuitState() for name in self.providers}
         self.active_requests: dict[UUID, asyncio.Task[CompletionResult]] = {}
 
@@ -81,11 +86,16 @@ class LLMGateway:
         except KeyError as exc:
             raise ValueError(f"No provider profile configured for task {task.value}") from exc
 
-    def provider_chain(self, task: LLMTask) -> list[LLMProvider]:
-        return [self.providers[name] for name in self.profile(task).providers]
+    def provider_chain(self, task: LLMTask, plan_id: str = "free") -> list[LLMProvider]:
+        names = (
+            self.premium_tutor_providers
+            if task is LLMTask.TUTOR_REPLY and plan_id == "premium" and self.premium_tutor_providers
+            else self.profile(task).providers
+        )
+        return [self.providers[name] for name in names]
 
-    def primary_provider(self, task: LLMTask) -> LLMProvider:
-        return self.provider_chain(task)[0]
+    def primary_provider(self, task: LLMTask, plan_id: str = "free") -> LLMProvider:
+        return self.provider_chain(task, plan_id)[0]
 
     def max_cost_usd(self, task: LLMTask) -> float:
         return self.profile(task).max_cost_usd
@@ -117,6 +127,7 @@ class LLMGateway:
         user_prompt: str,
         output_model: type[OutputModel],
         request_id: UUID | None = None,
+        plan_id: str = "free",
     ) -> GatewayResult[OutputModel]:
         profile = self.profile(task)
         request = CompletionRequest(
@@ -127,7 +138,7 @@ class LLMGateway:
             temperature=profile.temperature,
         )
         errors: list[str] = []
-        for provider in self.provider_chain(task):
+        for provider in self.provider_chain(task, plan_id):
             if not self._is_available(provider):
                 errors.append(f"{provider.name}: circuit open")
                 continue

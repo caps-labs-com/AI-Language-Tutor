@@ -66,6 +66,7 @@ def build_gateway(
     max_retries: int = 0,
     failure_threshold: int = 3,
     summary_providers: tuple[str, ...] | None = None,
+    premium_tutor_providers: tuple[str, ...] = (),
 ) -> LLMGateway:
     names = tuple(provider.name for provider in providers)
     return LLMGateway(
@@ -87,6 +88,7 @@ def build_gateway(
         max_retries=max_retries,
         failure_threshold=failure_threshold,
         recovery_seconds=30,
+        premium_tutor_providers=premium_tutor_providers,
     )
 
 
@@ -174,6 +176,16 @@ def test_tasks_can_use_different_providers() -> None:
     assert gateway.primary_provider(LLMTask.TUTOR_REPLY).name == "mock"
     assert gateway.primary_provider(LLMTask.SESSION_SUMMARY).name == "failing"
     assert gateway.max_cost_usd(LLMTask.SESSION_SUMMARY) == 0.04
+
+
+def test_premium_tutor_uses_its_verified_provider_chain() -> None:
+    gateway = build_gateway(
+        [MockProvider(), FailingProvider()],
+        premium_tutor_providers=("failing", "mock"),
+    )
+
+    assert gateway.primary_provider(LLMTask.TUTOR_REPLY, "free").name == "mock"
+    assert gateway.primary_provider(LLMTask.TUTOR_REPLY, "premium").name == "failing"
 
 
 def test_unknown_task_provider_is_rejected() -> None:

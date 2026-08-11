@@ -19,32 +19,33 @@ locals {
   }
 
   backend_environment = {
-    APP_ENV                         = "production"
-    APP_ALLOWED_ORIGINS             = join(",", var.backend_allowed_origins)
-    GOOGLE_CLOUD_PROJECT            = var.google_project_id
-    SUPABASE_URL                    = coalesce(var.backend_supabase_url, "https://not-configured.invalid")
-    LLM_PRIMARY_PROVIDER            = "gemini"
-    LLM_FALLBACK_PROVIDERS          = "deepseek"
-    LLM_REQUEST_TIMEOUT_SECONDS     = "20"
-    LLM_MAX_OUTPUT_TOKENS           = "1024"
-    LLM_MAX_RETRIES                 = "2"
-    LLM_CIRCUIT_FAILURE_THRESHOLD   = "3"
-    LLM_CIRCUIT_RECOVERY_SECONDS    = "30"
-    LLM_MAX_COST_PER_REQUEST_USD    = "0.02"
-    GEMINI_MODEL                    = "gemini-3.1-flash-lite"
-    GEMINI_INPUT_USD_PER_MILLION    = "0.25"
-    GEMINI_OUTPUT_USD_PER_MILLION   = "1.50"
-    DEEPSEEK_MODEL                  = "deepseek-v4-flash"
-    DEEPSEEK_INPUT_USD_PER_MILLION  = "0.14"
-    DEEPSEEK_OUTPUT_USD_PER_MILLION = "0.28"
-    ASAAS_BILLING_ENABLED           = "true"
-    ASAAS_ENVIRONMENT               = "production"
-    ASAAS_MOCK_CHECKOUT             = "false"
-    BILLING_SITE_URL                = "${var.site_url}/"
-    BILLING_EMAIL_FROM              = "Lume Tutor <noreply@caps-labs.com>"
-    SPEECH_SYNTHESIS_ENABLED        = "true"
-    SPEECH_SYNTHESIS_PROVIDER       = "google_standard"
-    SPEECH_SYNTHESIS_CACHE_VERSION  = "2026-08-02-v1"
+    APP_ENV                           = "production"
+    APP_ALLOWED_ORIGINS               = join(",", var.backend_allowed_origins)
+    GOOGLE_CLOUD_PROJECT              = var.google_project_id
+    SUPABASE_URL                      = coalesce(var.backend_supabase_url, "https://not-configured.invalid")
+    LLM_PRIMARY_PROVIDER              = "gemini"
+    LLM_FALLBACK_PROVIDERS            = "deepseek"
+    LLM_PREMIUM_TUTOR_REPLY_PROVIDERS = "deepseek,gemini"
+    LLM_REQUEST_TIMEOUT_SECONDS       = "20"
+    LLM_MAX_OUTPUT_TOKENS             = "1024"
+    LLM_MAX_RETRIES                   = "2"
+    LLM_CIRCUIT_FAILURE_THRESHOLD     = "3"
+    LLM_CIRCUIT_RECOVERY_SECONDS      = "30"
+    LLM_MAX_COST_PER_REQUEST_USD      = "0.02"
+    GEMINI_MODEL                      = "gemini-3.1-flash-lite"
+    GEMINI_INPUT_USD_PER_MILLION      = "0.25"
+    GEMINI_OUTPUT_USD_PER_MILLION     = "1.50"
+    DEEPSEEK_MODEL                    = "deepseek-v4-flash"
+    DEEPSEEK_INPUT_USD_PER_MILLION    = "0.14"
+    DEEPSEEK_OUTPUT_USD_PER_MILLION   = "0.28"
+    ASAAS_BILLING_ENABLED             = "true"
+    ASAAS_ENVIRONMENT                 = "production"
+    ASAAS_MOCK_CHECKOUT               = "false"
+    BILLING_SITE_URL                  = "${var.site_url}/"
+    BILLING_EMAIL_FROM                = "Lume Tutor <noreply@caps-labs.com>"
+    SPEECH_SYNTHESIS_ENABLED          = "true"
+    SPEECH_SYNTHESIS_PROVIDER         = "google_standard"
+    SPEECH_SYNTHESIS_CACHE_VERSION    = "2026-08-02-v1"
   }
 }
 

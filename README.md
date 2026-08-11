@@ -18,6 +18,7 @@ The system supports multiple languages and interaction modes, including text, vo
 - 📝 Automatic generation of quizzes, exercises, and flashcards
 - 🔁 Spaced repetition for vocabulary retention
 - 🌍 Role-playing conversations (travel, business, healthcare, restaurants, interviews, etc.)
+- 🎭 30 conversation scenarios with level-specific characters, goals, progression and complications
 - 📖 Reading and listening comprehension exercises
 - 📈 Learning analytics and progress dashboard
 - 🎯 Adaptive difficulty based on learner performance
@@ -32,6 +33,7 @@ The system supports multiple languages and interaction modes, including text, vo
 - FastAPI backend packaged with Docker and deployed to Google Cloud Run
 - Supabase Auth, PostgreSQL, Row Level Security and versioned migrations
 - Provider-independent AI gateway with Gemini, DeepSeek and Kimi adapters
+- Server-verified plan routing: DeepSeek-first conversation tutor for Premium users
 - Gemini audio transcription through the authenticated backend
 - Learning content and learner progress persisted in PostgreSQL
 - Terraform for Cloudflare, Supabase and Google Cloud infrastructure

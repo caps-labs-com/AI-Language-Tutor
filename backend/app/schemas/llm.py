@@ -135,6 +135,22 @@ class SendConversationMessageResponse(BaseModel):
     max_learner_messages: int = Field(ge=1)
 
 
+class TranslateConversationMessageRequest(BaseModel):
+    message_sequence: int = Field(ge=1)
+    request_id: UUID
+
+
+class MessageTranslation(BaseModel):
+    translation_pt_br: str = Field(min_length=1, max_length=2_000)
+
+
+class TranslateConversationMessageResponse(BaseModel):
+    request_id: UUID
+    message_sequence: int = Field(ge=1)
+    translation_pt_br: str = Field(min_length=1, max_length=2_000)
+    usage: UsageSummary
+
+
 # Os limites de texto abaixo são folgados de propósito. O resumo é truncado para
 # os limites do banco no momento de gravar; recusar a resposta do modelo por
 # alguns caracteres deixaria o aluno sem resumo depois de uma conversa real.

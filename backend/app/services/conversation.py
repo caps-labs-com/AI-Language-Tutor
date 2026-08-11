@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -71,6 +72,15 @@ class ConversationContext:
     previously_corrected: tuple[str, ...]
     messages: tuple[ConversationMessageView, ...]
     correction_preference: str = "immediate"
+    plan_id: str = "free"
+    character_role_pt_br: str = "Interlocutor do cenário"
+    character_personality_pt_br: str = "Atencioso, natural e colaborativo"
+    situation_pt_br: str = "Conduza a situação descrita pelo objetivo."
+    register_pt_br: str = "Neutro e adequado à situação"
+    conversation_beats_pt_br: tuple[str, ...] = ()
+    complications_pt_br: tuple[str, ...] = ()
+    cefr_rationale_pt_br: str = "Prática comunicativa contextualizada."
+    complexity_controls_pt_br: tuple[str, ...] = ()
 
     @property
     def is_active(self) -> bool:
@@ -96,9 +106,19 @@ class ConversationContext:
                 for message in self.messages
             ),
             total_message_count=self.message_count,
+            learner_message_count=self.learner_message_count,
             previously_corrected=self.previously_corrected,
             planned_minutes=self.planned_minutes,
             correction_preference=self.correction_preference,
+            plan_id=self.plan_id,
+            character_role_pt_br=self.character_role_pt_br,
+            character_personality_pt_br=self.character_personality_pt_br,
+            situation_pt_br=self.situation_pt_br,
+            register_pt_br=self.register_pt_br,
+            conversation_beats_pt_br=self.conversation_beats_pt_br,
+            complications_pt_br=self.complications_pt_br,
+            cefr_rationale_pt_br=self.cefr_rationale_pt_br,
+            complexity_controls_pt_br=self.complexity_controls_pt_br,
         )
 
 
@@ -187,7 +207,7 @@ class ConversationService:
         )
         if not result.get("found", False):
             raise ConversationRejectedError("session_not_found")
-        preference_response = await self.client.get(
+        preference_request = self.client.get(
             "/learner_preferences",
             params={
                 "user_id": f"eq.{user_id}",
@@ -195,8 +215,34 @@ class ConversationService:
                 "limit": "1",
             },
         )
+        scenario_request = self.client.get(
+            "/conversation_scenarios",
+            params={
+                "id": f"eq.{result['scenario_id']}",
+                "select": (
+                    "character_role_pt_br,character_personality_pt_br,situation_pt_br,"
+                    "register_pt_br,conversation_beats_pt_br,complications_pt_br"
+                    ",cefr_rationale_pt_br,complexity_controls_pt_br"
+                ),
+                "limit": "1",
+            },
+        )
+        entitlement_request = self.client.post(
+            "/rpc/get_user_entitlements_summary",
+            json={"p_user_id": str(user_id)},
+        )
+        preference_response, scenario_response, entitlement_response = await asyncio.gather(
+            preference_request,
+            scenario_request,
+            entitlement_request,
+        )
         preference_response.raise_for_status()
+        scenario_response.raise_for_status()
+        entitlement_response.raise_for_status()
         preference_rows = preference_response.json()
+        scenario_rows = scenario_response.json()
+        scenario = scenario_rows[0] if scenario_rows else {}
+        entitlements = entitlement_response.json()
         correction_preference = (
             preference_rows[0].get("correction_preference", "immediate")
             if preference_rows
@@ -216,6 +262,23 @@ class ConversationService:
             correction_count=int(result["correction_count"]),
             max_learner_messages=int(result["max_learner_messages"]),
             correction_preference=correction_preference,
+            plan_id=str(entitlements.get("plan_id") or "free"),
+            character_role_pt_br=str(
+                scenario.get("character_role_pt_br") or "Interlocutor do cenário"
+            ),
+            character_personality_pt_br=str(
+                scenario.get("character_personality_pt_br") or "Atencioso, natural e colaborativo"
+            ),
+            situation_pt_br=str(
+                scenario.get("situation_pt_br") or "Conduza a situação descrita pelo objetivo."
+            ),
+            register_pt_br=str(scenario.get("register_pt_br") or "Neutro e adequado à situação"),
+            conversation_beats_pt_br=tuple(scenario.get("conversation_beats_pt_br") or ()),
+            complications_pt_br=tuple(scenario.get("complications_pt_br") or ()),
+            cefr_rationale_pt_br=str(
+                scenario.get("cefr_rationale_pt_br") or "Prática comunicativa contextualizada."
+            ),
+            complexity_controls_pt_br=tuple(scenario.get("complexity_controls_pt_br") or ()),
             previously_corrected=tuple(result.get("previously_corrected") or ()),
             messages=tuple(
                 ConversationMessageView(

@@ -12,10 +12,13 @@ from app.schemas.llm import (
     CompleteConversationResponse,
     ConversationSessionView,
     LLMTask,
+    MessageTranslation,
     SendConversationMessageRequest,
     SendConversationMessageResponse,
     SessionSummary,
     StartConversationRequest,
+    TranslateConversationMessageRequest,
+    TranslateConversationMessageResponse,
     TutorReply,
     UsageSummary,
 )
@@ -29,9 +32,12 @@ from app.services.conversation import (
 from app.services.gateway import GatewayUnavailableError
 from app.services.providers.common import (
     SUMMARY_SYSTEM_PROMPT,
+    TRANSLATION_SYSTEM_PROMPT,
     TUTOR_SYSTEM_PROMPT,
     build_summary_prompt,
+    build_translation_prompt,
     build_tutor_prompt,
+    discard_punctuation_only_correction,
 )
 
 router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
@@ -158,6 +164,106 @@ async def read_conversation(
         raise _rejection(exc) from exc
 
 
+@router.post("/{session_id}/translations", response_model=TranslateConversationMessageResponse)
+async def translate_conversation_message(
+    session_id: UUID,
+    payload: TranslateConversationMessageRequest,
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    conversations: ConversationDependency,
+    gateway: GatewayDependency,
+    budget: BudgetDependency,
+) -> TranslateConversationMessageResponse:
+    """Translate a tutor message owned by the authenticated user."""
+    try:
+        context = await conversations.context(session_id=session_id, user_id=user.id)
+    except ConversationUnavailableError as exc:
+        raise _unavailable() from exc
+    except ConversationRejectedError as exc:
+        raise _rejection(exc) from exc
+
+    message = next(
+        (
+            item
+            for item in context.messages
+            if item.sequence == payload.message_sequence and item.role.value == "tutor"
+        ),
+        None,
+    )
+    if message is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="A mensagem do tutor não foi encontrada nesta conversa.",
+        )
+
+    task = LLMTask.TUTOR_REPLY
+    primary = gateway.primary_provider(task, context.plan_id)
+    try:
+        await budget.reserve(
+            user_id=user.id,
+            request_id=payload.request_id,
+            feature=task.value,
+            provider=primary.name,
+            model=primary.model,
+            estimated_max_cost_usd=gateway.max_cost_usd(task),
+        )
+    except BudgetExceededError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
+    except AccountSuspendedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    started_at = time.monotonic()
+    try:
+        generated = await gateway.generate(
+            task=task,
+            system_prompt=TRANSLATION_SYSTEM_PROMPT,
+            user_prompt=build_translation_prompt(
+                source_language=context.target_language,
+                message=message.content,
+            ),
+            output_model=MessageTranslation,
+            request_id=payload.request_id,
+            plan_id=context.plan_id,
+        )
+    except GatewayUnavailableError as exc:
+        await budget.finalize(
+            request_id=payload.request_id,
+            status="failed",
+            provider=primary.name,
+            model=primary.model,
+            latency_ms=round((time.monotonic() - started_at) * 1_000),
+            error_code="translation_unavailable",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="A tradução está temporariamente indisponível.",
+        ) from exc
+
+    latency_ms = round((time.monotonic() - started_at) * 1_000)
+    await budget.finalize(
+        request_id=payload.request_id,
+        status="succeeded",
+        provider=generated.provider,
+        model=generated.model,
+        input_tokens=generated.input_tokens,
+        output_tokens=generated.output_tokens,
+        estimated_cost_usd=generated.estimated_cost_usd,
+        latency_ms=latency_ms,
+    )
+    return TranslateConversationMessageResponse(
+        request_id=payload.request_id,
+        message_sequence=payload.message_sequence,
+        translation_pt_br=generated.result.translation_pt_br,
+        usage=UsageSummary(
+            provider=generated.provider,
+            model=generated.model,
+            input_tokens=generated.input_tokens,
+            output_tokens=generated.output_tokens,
+            estimated_cost_usd=generated.estimated_cost_usd,
+            latency_ms=latency_ms,
+        ),
+    )
+
+
 @router.post("/{session_id}/messages", response_model=SendConversationMessageResponse)
 async def send_conversation_message(
     session_id: UUID,
@@ -218,7 +324,7 @@ async def send_conversation_message(
     if not context.has_room_for_another_message:
         raise _rejection(ConversationRejectedError("session_message_limit"))
 
-    primary = gateway.primary_provider(task)
+    primary = gateway.primary_provider(task, context.plan_id)
     try:
         await budget.reserve(
             user_id=user.id,
@@ -247,6 +353,7 @@ async def send_conversation_message(
             user_prompt=build_tutor_prompt(context.to_prompt_context(), payload.message),
             output_model=TutorReply,
             request_id=payload.request_id,
+            plan_id=context.plan_id,
         )
     except asyncio.CancelledError as exc:
         await budget.finalize(
@@ -276,8 +383,9 @@ async def send_conversation_message(
         ) from exc
 
     latency_ms = round((time.monotonic() - started_at) * 1_000)
+    tutor_result = discard_punctuation_only_correction(generated.result)
     cached = CachedGeneration(
-        result=generated.result,
+        result=tutor_result,
         provider=generated.provider,
         model=generated.model,
         input_tokens=generated.input_tokens,
@@ -307,8 +415,8 @@ async def send_conversation_message(
             session_id=session_id,
             user_id=user.id,
             learner_message=payload.message,
-            tutor_reply=generated.result.reply,
-            correction=generated.result.correction,
+            tutor_reply=tutor_result.reply,
+            correction=tutor_result.correction,
             request_id=payload.request_id,
         )
     except ConversationUnavailableError as exc:
@@ -320,7 +428,7 @@ async def send_conversation_message(
         request_id=payload.request_id,
         learner_sequence=stored.learner_sequence,
         tutor_sequence=stored.tutor_sequence,
-        result=generated.result,
+        result=tutor_result,
         usage=UsageSummary(
             provider=generated.provider,
             model=generated.model,

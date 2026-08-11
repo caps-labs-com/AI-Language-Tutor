@@ -12,7 +12,7 @@ uv sync --dev
 uv run uvicorn app.main:app --reload
 ```
 
-The application defaults to Gemini 2.5 Flash-Lite with DeepSeek V4 Flash as
+The application defaults to Gemini 3.1 Flash-Lite with DeepSeek V4 Flash as
 fallback. Tests inject the `mock` provider and do not consume paid tokens.
 
 Endpoints:
@@ -47,6 +47,7 @@ Choose the primary provider and ordered fallbacks through environment variables:
 ```env
 LLM_PRIMARY_PROVIDER=gemini
 LLM_FALLBACK_PROVIDERS=deepseek
+LLM_PREMIUM_TUTOR_REPLY_PROVIDERS=deepseek,gemini
 ```
 
 Supported adapter names are `mock`, `deepseek`, `kimi`, and `gemini`. Real
@@ -58,7 +59,20 @@ Example production routing:
 ```env
 LLM_PRIMARY_PROVIDER=gemini
 LLM_FALLBACK_PROVIDERS=deepseek
+LLM_PREMIUM_TUTOR_REPLY_PROVIDERS=deepseek,gemini
 ```
+
+The conversation route resolves the user's plan server-side through Supabase.
+Free conversations use the normal task chain; Premium tutor replies use
+DeepSeek first and Gemini as fallback. A plan supplied by the browser is never
+used for authorization or provider routing. DeepSeek V4 runs in non-thinking
+mode for interactive replies to keep latency predictable.
+
+Conversation scenarios include a character role, personality, register,
+situation, ordered conversation beats and optional complications. These fields
+are loaded by the backend service role and combined with explicit A1-B2
+instructions in the tutor prompt. The model stays in character, reacts to what
+the learner said and advances the scenario without exposing internal metadata.
 
 The checked-in defaults use the official prices verified on 2026-07-29:
 

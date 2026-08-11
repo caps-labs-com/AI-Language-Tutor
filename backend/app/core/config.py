@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     llm_tutor_reply_providers: Annotated[list[str], NoDecode] = Field(default_factory=list)
     llm_tutor_reply_max_output_tokens: int = 1_024
     llm_tutor_reply_temperature: float = 0.3
+    llm_premium_tutor_reply_providers: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["deepseek", "gemini"]
+    )
 
     llm_session_summary_providers: Annotated[list[str], NoDecode] = Field(default_factory=list)
     llm_session_summary_max_output_tokens: int = 900
@@ -96,6 +99,7 @@ class Settings(BaseSettings):
         "app_allowed_origins",
         "llm_fallback_providers",
         "llm_tutor_reply_providers",
+        "llm_premium_tutor_reply_providers",
         "llm_session_summary_providers",
         mode="before",
     )
