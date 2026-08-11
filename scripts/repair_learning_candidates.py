@@ -11,6 +11,7 @@ from typing import Any
 
 from content_pipeline_common import (
     canonicalize_content,
+    content_completeness_score,
     load_curriculum,
     load_jsonl,
     now_iso,
@@ -25,6 +26,32 @@ def repair_prompt(candidate: dict[str, Any], curriculum: dict[str, Any]) -> str:
     content_type = candidate["content_type"]
     validation = candidate["validation"]
     limits = curriculum["common"]["levels"][level]["content_limits"]
+    question_counts = {
+        "reading": {"A1": 3, "A2": 4, "B1": 6, "B2": 8},
+        "quick_lesson": {"A1": 2, "A2": 3, "B1": 4, "B2": 5},
+    }
+    if content_type == "reading":
+        expected = question_counts[content_type][level]
+        type_contract = (
+            'The top-level object must contain only the reading fields: '
+            f'{{"title": string, "body": string, "questions": array of exactly {expected} '
+            'objects}}. Separate body paragraphs with "\\n\\n". Each question has prompt, '
+            "exactly 4 distinct options, zero-based answer_index and explanation_pt_br."
+        )
+    elif content_type == "quick_lesson":
+        expected = question_counts[content_type][level]
+        type_contract = (
+            'The top-level object must contain only the quick lesson fields: '
+            f'{{"title": string, "body": string, "questions": array of exactly {expected} '
+            "objects}}. Each question has "
+            "prompt, exactly 4 distinct options, zero-based answer_index and explanation_pt_br."
+        )
+    else:
+        type_contract = (
+            'The top-level object must contain only grammar fields: {"title", '
+            '"overview_pt_br", "formation_pt_br", "use_cases", "common_mistakes", '
+            '"notes_pt_br", "exercises"}.'
+        )
     return f"""Repair one language-learning content JSON object for Brazilian adults.
 Return the complete corrected content object as JSON only, without an envelope or Markdown.
 
@@ -36,6 +63,7 @@ Immutable requirements:
 - content limits: {json.dumps(limits)}
 - preserve the pedagogical subject, but rewrite any field necessary to fix every error
 - never copy eight consecutive words from an external source
+- output schema: {type_contract}
 
 For grammar: notes_pt_br, use_cases and common_mistakes must each be arrays with non-empty items; include exactly five exercises. Every exercise must have title, explanation in Brazilian Portuguese, a natural target-language example, question, 2-6 distinct options and a valid zero-based answer_index. Target-language material must be appropriate for {level}.
 
@@ -80,8 +108,17 @@ def main() -> int:
                 f"validated candidate not found in source file: {candidate_id}"
             )
         prompt = repair_prompt(rejected, curriculum)
-        content = canonicalize_content(
+        original_content = canonicalize_content(
+            rejected["content_type"], original["content"]
+        )
+        repaired_content = canonicalize_content(
             rejected["content_type"], call_model(args.provider, args.model, prompt)
+        )
+        content = (
+            repaired_content
+            if content_completeness_score(rejected["content_type"], repaired_content)
+            >= content_completeness_score(rejected["content_type"], original_content)
+            else original_content
         )
         previous_hash = hashlib.sha256(
             json.dumps(original["content"], ensure_ascii=False, sort_keys=True).encode()

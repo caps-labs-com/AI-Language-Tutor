@@ -260,10 +260,19 @@ def json_sql(value: Any) -> str:
 def canonicalize_content(content_type: str, value: dict[str, Any]) -> dict[str, Any]:
     """Normalize common model response variants into the database contract."""
     content = dict(value)
+
+    wrapper_keys = {
+        "reading": ("reading", "reading_passage", "passage", "content"),
+        "quick_lesson": ("quick_lesson", "lesson", "content"),
+        "grammar": ("grammar", "grammar_topic", "topic", "content"),
+    }
+    for key in wrapper_keys.get(content_type, ("content",)):
+        if isinstance(content.get(key), dict):
+            content = dict(content[key])
+            break
+
     if content_type != "grammar":
         return content
-    if isinstance(content.get("grammar"), dict):
-        content = dict(content["grammar"])
     for key in ("use_cases", "common_mistakes", "notes_pt_br"):
         if isinstance(content.get(key), str) and content[key].strip():
             content[key] = [content[key].strip()]
@@ -297,3 +306,22 @@ def canonicalize_content(content_type: str, value: dict[str, Any]) -> dict[str, 
         normalized.append(exercise)
     content["exercises"] = normalized
     return content
+
+
+def content_completeness_score(content_type: str, value: dict[str, Any]) -> int:
+    """Score structural completeness so a model repair cannot erase valid content."""
+    content = canonicalize_content(content_type, value)
+    score = sum(
+        isinstance(content.get(key), str) and bool(content[key].strip())
+        for key in ("title", "body", "overview_pt_br", "formation_pt_br")
+    )
+    list_keys = (
+        ("questions",)
+        if content_type in {"reading", "quick_lesson"}
+        else ("use_cases", "common_mistakes", "notes_pt_br", "exercises")
+    )
+    for key in list_keys:
+        items = content.get(key)
+        if isinstance(items, list):
+            score += 1 + len(items)
+    return score

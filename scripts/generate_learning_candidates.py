@@ -252,8 +252,24 @@ def build_prompt(
         if kind in counts
         else "one grammar topic and exactly 5 exercises"
     )
+    schema = {
+        "reading": (
+            '{"title": string, "body": string, "questions": array}. '
+            "Do not add grammar, reading, passage or content wrapper fields."
+        ),
+        "quick_lesson": (
+            '{"title": string, "body": string, "questions": array}. '
+            "Do not add lesson, quick_lesson or content wrapper fields."
+        ),
+        "grammar": (
+            '{"title": string, "overview_pt_br": string, "formation_pt_br": string, '
+            '"use_cases": array, "common_mistakes": array, "notes_pt_br": array, '
+            '"exercises": array}. Do not add grammar, topic or content wrapper fields.'
+        ),
+    }[kind]
     return f"""You create original {language} learning material for Brazilian adults at CEFR {level}.
 Return one JSON object only. Type: {kind}; curriculum concept: {concept}; requirement: {shape}.
+The top-level JSON schema is exactly: {schema}
 Reading limits: {json.dumps(limits)}. Every reading/quick question has prompt, 4 distinct options, zero-based answer_index and explanation_pt_br.
 Grammar has title, overview_pt_br and formation_pt_br. use_cases and common_mistakes are JSON arrays with 2-8 non-empty items; notes_pt_br is a JSON array with 1-8 non-empty items. Include exactly five exercises. Every grammar exercise has title, explanation, a natural {language} example, a {language} question, 4 normalized-distinct {language} options and zero-based answer_index. Explanations are Brazilian Portuguese; learner-facing examples, questions and options are only {language} at CEFR {level}.
 Reading/quick lesson has title, body and questions. Use sources only as factual/pedagogical grounding. Write wholly original material; never copy 8 consecutive source words.

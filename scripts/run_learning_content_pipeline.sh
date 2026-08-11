@@ -15,6 +15,7 @@ concept=""
 migration_output=""
 run_dir_override=""
 repair_attempts="2"
+minimum_approved=""
 
 usage() {
   cat <<'EOF'
@@ -33,6 +34,7 @@ Opções:
   --output ARQUIVO      Caminho da migration SQL não publicada
   --run-dir DIRETÓRIO   Diretório exato da execução (uso por orquestradores)
   --repair-attempts N   Rodadas de reparo dos reprovados (padrão: 2)
+  --minimum-approved N  Para de reparar ao alcançar N aprovados (padrão: --count)
   --env-file ARQUIVO    Arquivo com DEEPSEEK_API_KEY e DEEPSEEK_MODEL
   -h, --help            Exibe esta ajuda
 
@@ -56,6 +58,7 @@ while (($#)); do
     --output) migration_output="${2:-}"; shift 2 ;;
     --run-dir) run_dir_override="${2:-}"; shift 2 ;;
     --repair-attempts) repair_attempts="${2:-}"; shift 2 ;;
+    --minimum-approved) minimum_approved="${2:-}"; shift 2 ;;
     --env-file) env_file="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Argumento desconhecido: $1" >&2; usage >&2; exit 2 ;;
@@ -71,6 +74,13 @@ if [[ ! "$count" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "$repair_attempts" =~ ^[0-9]+$ ]]; then
   echo "--repair-attempts deve ser um inteiro maior ou igual a zero" >&2
+  exit 2
+fi
+if [[ -z "$minimum_approved" ]]; then
+  minimum_approved="$count"
+fi
+if [[ ! "$minimum_approved" =~ ^[1-9][0-9]*$ ]] || ((minimum_approved > count)); then
+  echo "--minimum-approved deve ser um inteiro entre 1 e --count" >&2
   exit 2
 fi
 if [[ "$language" == "all" && -n "$concept" ]]; then
@@ -185,8 +195,21 @@ if ((validation_status > 1)); then
   echo "A validação falhou com erro operacional (status $validation_status)." >&2
   exit "$validation_status"
 fi
+approved_count() {
+  python3 - "$validated_file" <<'PY'
+import json
+import sys
+
+print(sum(
+    json.loads(line).get("status") == "approved"
+    for line in open(sys.argv[1], encoding="utf-8")
+    if line.strip()
+))
+PY
+}
+current_approved="$(approved_count)"
 repair_round=0
-while ((validation_status == 1 && repair_round < repair_attempts)); do
+while ((validation_status == 1 && current_approved < minimum_approved && repair_round < repair_attempts)); do
   repair_round=$((repair_round + 1))
   echo "[3/4] Reparando candidatos reprovados (rodada $repair_round/$repair_attempts)..."
   DEEPSEEK_API_KEY="$(read_env_value DEEPSEEK_API_KEY)" \
@@ -205,9 +228,10 @@ while ((validation_status == 1 && repair_round < repair_attempts)); do
     echo "A revalidação falhou com erro operacional (status $validation_status)." >&2
     exit "$validation_status"
   fi
+  current_approved="$(approved_count)"
 done
 if ((validation_status == 1)); then
-  echo "Aviso: ainda há candidatos rejeitados; somente os aprovados entrarão na migration." >&2
+  echo "Aviso: $current_approved candidato(s) aprovado(s) e mínimo $minimum_approved; somente os aprovados entrarão na migration." >&2
 fi
 
 echo "[4/4] Criando migration revisável e não publicada..."

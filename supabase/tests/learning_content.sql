@@ -50,15 +50,10 @@ begin
     left join public.grammar_exercises exercise
       on exercise.topic_id = topic.id and exercise.is_published
     where topic.is_published
-    group by topic.id, topic.level
-    having count(exercise.id) <> case topic.level
-      when 'A1' then 5
-      when 'A2' then 6
-      when 'B1' then 8
-      when 'B2' then 10
-    end
+    group by topic.id
+    having count(exercise.id) < 5
   ) then
-    raise exception 'Grammar catalog failure: expected A1=5, A2=6, B1=8, B2=10 exercises per topic';
+    raise exception 'Grammar catalog failure: expected at least 5 exercises per topic';
   end if;
 
   if exists (

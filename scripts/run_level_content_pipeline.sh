@@ -126,6 +126,17 @@ for current_language in "${languages[@]}"; do
     retries_used=0
     while true; do
       current_approved=0
+      if [[ -s "${run_dir}/candidates.jsonl" && -s "${run_dir}/audit.jsonl" ]]; then
+        revalidation_status=0
+        python3 scripts/validate_learning_candidates.py \
+          --input "${run_dir}/candidates.jsonl" \
+          --audit "${run_dir}/audit.jsonl" \
+          --output "${run_dir}/validated-candidates.jsonl" || revalidation_status=$?
+        if ((revalidation_status > 1)); then
+          echo "Falha operacional ao revalidar ${current_language}/${current_type}." >&2
+          exit "$revalidation_status"
+        fi
+      fi
       if [[ -s "${run_dir}/validated-candidates.jsonl" ]]; then
         current_approved="$(approved_in_file "${run_dir}/validated-candidates.jsonl")"
         echo "  Aprovados: $current_approved/$count; mínimo: $minimum_approved."
@@ -145,6 +156,7 @@ for current_language in "${languages[@]}"; do
         --level "$level" \
         --content-type "$current_type" \
         --count "$count" \
+        --minimum-approved "$minimum_approved" \
         --run-dir "$run_dir"; then
         echo "Falha em ${current_language}/${level}/${current_type}." >&2
         echo "Nenhuma migration de exclusão foi criada. Resultados: $batch_dir" >&2

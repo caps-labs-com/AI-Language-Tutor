@@ -90,6 +90,46 @@ class ContentPipelineTests(unittest.TestCase):
         )
         self.assertEqual(content["notes_pt_br"], ["Uma observação."])
 
+    def test_reading_canonicalizer_unwraps_mixed_model_response(self) -> None:
+        from content_pipeline_common import canonicalize_content
+
+        reading = {"title": "A trip", "body": "A useful text.", "questions": []}
+        content = canonicalize_content(
+            "reading", {"content_type": "reading", "grammar": {}, "reading": reading}
+        )
+        self.assertEqual(content, reading)
+
+    def test_repair_completeness_prefers_populated_reading(self) -> None:
+        from content_pipeline_common import content_completeness_score
+
+        complete = {
+            "reading": {
+                "title": "A trip",
+                "body": "A useful text.",
+                "questions": [{"prompt": "Where?"}],
+            }
+        }
+        self.assertGreater(
+            content_completeness_score("reading", complete),
+            content_completeness_score("reading", {"title": "A trip"}),
+        )
+
+    def test_grammar_repair_prompt_does_not_require_question_count(self) -> None:
+        from repair_learning_candidates import repair_prompt
+
+        candidate = {
+            "language": "en",
+            "level": "A2",
+            "content_type": "grammar",
+            "curriculum_concept_ids": ["en.a2.example"],
+            "validation": {"errors": [], "warnings": []},
+            "content": {"title": "Example"},
+        }
+        curriculum = {
+            "common": {"levels": {"A2": {"content_limits": {}}}}
+        }
+        self.assertIn("grammar fields", repair_prompt(candidate, curriculum))
+
     def test_model_json_parser_accepts_markdown_fence(self) -> None:
         self.assertEqual(parse_model_json('```json\n{"ok": true}\n```'), {"ok": True})
 
