@@ -64,7 +64,14 @@ import {
   recommendScenario,
   type ScenarioCatalogItem,
 } from "@/lib/conversation";
-import { loadEntitlements, planLabel, type EntitlementsSummary } from "@/lib/entitlements";
+import {
+  cacheConfirmedPlan,
+  clearCachedPlan,
+  loadEntitlements,
+  planLabel,
+  readCachedPlan,
+  type EntitlementsSummary,
+} from "@/lib/entitlements";
 import { isNearLimit, UPGRADE_HIGHLIGHTS } from "@/lib/pricing";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { PlanComparison } from "@/components/plan-comparison";
@@ -2215,8 +2222,11 @@ export default function ProductPrototype() {
     try {
       const summary = await loadEntitlements(accessToken);
       setPlanId(summary.plan_id);
+      cacheConfirmedPlan(userId, summary.plan_id);
     } catch {
-      setPlanId("free");
+      // O cache só antecipa a apresentação. A API continua validando cada
+      // entitlement e uma falha transitória não deve rebaixar a interface.
+      setPlanId((current) => readCachedPlan(userId) || current);
     } finally {
       setPlanResolvedUserId(userId);
     }
@@ -2281,6 +2291,11 @@ export default function ProductPrototype() {
       }
       setPendingEmail(storedPendingEmail);
       if (currentSession) {
+        const cachedPlan = readCachedPlan(currentSession.user.id);
+        if (cachedPlan) {
+          setPlanId(cachedPlan);
+          setPlanResolvedUserId(currentSession.user.id);
+        }
         setDisplayName(currentSession.user.user_metadata.display_name || currentSession.user.email?.split("@")[0] || "Aluno");
         const [{ data: profile }, { data: preferencesRow }] = await Promise.all([
           supabase
@@ -2301,11 +2316,16 @@ export default function ProductPrototype() {
           ? mapLearnerPreferences(preferencesRow as LearnerPreferencesRow)
           : null;
         setPreferences(mappedPreferences);
-        await Promise.all([
+        const initialLoads: Promise<unknown>[] = [
           loadStudiedLanguages(currentSession.user.id, mappedPreferences),
           refreshAdminAccess(currentSession.user.id),
-          refreshPlan(currentSession.access_token, currentSession.user.id),
-        ]);
+        ];
+        if (cachedPlan) {
+          void refreshPlan(currentSession.access_token, currentSession.user.id);
+        } else {
+          initialLoads.push(refreshPlan(currentSession.access_token, currentSession.user.id));
+        }
+        await Promise.all(initialLoads);
       } else {
         setPlanId("free");
         setPlanResolvedUserId(null);
@@ -2708,6 +2728,7 @@ export default function ProductPrototype() {
 
   const accountDeleted = async () => {
     if (session?.user.id) {
+      clearCachedPlan(session.user.id);
       // O onboarding e o cenário selecionado são gravados em sessionStorage;
       // limpar localStorage não removia nada.
       const onboardingKeys = onboardingStorageKeys(session.user.id);

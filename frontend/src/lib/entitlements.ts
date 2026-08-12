@@ -33,6 +33,24 @@ export function planLabel(planId: string) {
   return planId === "premium" ? "Premium" : "Free";
 }
 
+const cachedPlanKey = (userId: string) => `lume:confirmed-plan:${userId}`;
+
+export function readCachedPlan(userId: string): string | null {
+  if (typeof window === "undefined") return null;
+  const planId = window.sessionStorage.getItem(cachedPlanKey(userId));
+  return planId === "premium" || planId === "free" ? planId : null;
+}
+
+export function cacheConfirmedPlan(userId: string, planId: string) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(cachedPlanKey(userId), planId === "premium" ? "premium" : "free");
+}
+
+export function clearCachedPlan(userId: string) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(cachedPlanKey(userId));
+}
+
 export async function loadEntitlements(accessToken: string) {
   return apiRequest<EntitlementsSummary>("/api/v1/account/entitlements", { accessToken });
 }
